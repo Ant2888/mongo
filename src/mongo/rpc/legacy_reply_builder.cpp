@@ -85,14 +85,30 @@ LegacyReplyBuilder& LegacyReplyBuilder::setRawCommandReply(const BSONObj& comman
     return *this;
 }
 
-BSONObjBuilder LegacyReplyBuilder::getInPlaceReplyBuilder(std::size_t reserveBytes) {
+BSONObjBuilder LegacyReplyBuilder::getBodyBuilder(std::size_t reserveBytes) {
+    if (_bodyOffset) {
+        // ignore the reserveBytes (maybe should fail)?
+        return getBodyBuilder();
+    }
+
     invariant(_state == State::kCommandReply);
     // Eagerly allocate reserveBytes bytes.
     _builder.reserveBytes(reserveBytes);
     // Claim our reservation immediately so we can actually write data to it.
     _builder.claimReservedBytes(reserveBytes);
     _state = State::kMetadata;
-    return BSONObjBuilder(_builder);
+    auto bob = BSONObjBuilder(_builder);
+    _bodyOffset = bob.offset();
+    return bob;
+}
+
+BSONObjBuilder LegacyReplyBuilder::getBodyBuilder() {
+    if (_state == State::kCommandReply) {
+        return getBodyBuilder(_reserved);
+    }
+
+    invariant(_state == State::kMetadata);
+    return BSONObjBuilder(BSONObjBuilder::ResumeBuildingTag{}, _builder, _bodyOffset);
 }
 
 LegacyReplyBuilder& LegacyReplyBuilder::setMetadata(const BSONObj& metadata) {
@@ -118,6 +134,7 @@ void LegacyReplyBuilder::reset() {
     _message.reset();
     _state = State::kCommandReply;
     _staleConfigError = false;
+    _bodyOffset = 0;
 }
 
 

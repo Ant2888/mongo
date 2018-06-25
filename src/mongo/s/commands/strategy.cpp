@@ -151,7 +151,7 @@ void appendRequiredFieldsToResponse(OperationContext* opCtx, BSONObjBuilder* res
 void execCommandClient(OperationContext* opCtx,
                        CommandInvocation* invocation,
                        const OpMsgRequest& request,
-                       CommandReplyBuilder* result) {
+                       rpc::ReplyBuilderInterface* result) {
     const Command* c = invocation->definition();
     ON_BLOCK_EXIT([opCtx, &result] {
         auto body = result->getBodyBuilder();
@@ -289,10 +289,11 @@ MONGO_FAIL_POINT_DEFINE(doNotRefreshShardsOnRetargettingError);
 void runCommand(OperationContext* opCtx,
                 const OpMsgRequest& request,
                 const NetworkOp opType,
-                BSONObjBuilder&& builder) {
+                rpc::ReplyBuilderInterface* replyBuilder) {
     auto const commandName = request.getCommandName();
     auto const command = CommandHelpers::findCommand(commandName);
     if (!command) {
+        auto builder = replyBuilder->getBodyBuilder();
         ON_BLOCK_EXIT([opCtx, &builder] { appendRequiredFieldsToResponse(opCtx, &builder); });
         CommandHelpers::appendCommandStatusNoThrow(
             builder,
@@ -355,11 +356,10 @@ void runCommand(OperationContext* opCtx,
     auto& readConcernArgs = repl::ReadConcernArgs::get(opCtx);
     auto readConcernParseStatus = readConcernArgs.initialize(request.body);
     if (!readConcernParseStatus.isOK()) {
+        auto builder = replyBuilder->getBodyBuilder();
         CommandHelpers::appendCommandStatusNoThrow(builder, readConcernParseStatus);
         return;
     }
-
-    CommandReplyBuilder crb(std::move(builder));
 
     try {
         for (int tries = 0;; ++tries) {
@@ -374,9 +374,9 @@ void runCommand(OperationContext* opCtx,
                           "unexpected change of namespace when retrying");
             }
 
-            crb.reset();
+            replyBuilder->reset();
             try {
-                execCommandClient(opCtx, invocation.get(), request, &crb);
+                execCommandClient(opCtx, invocation.get(), request, replyBuilder);
                 return;
             } catch (const ExceptionForCat<ErrorCategory::NeedRetargettingError>& ex) {
                 const auto staleNs = [&] {
@@ -434,8 +434,8 @@ void runCommand(OperationContext* opCtx,
         command->incrementCommandsFailed();
         CurOp::get(opCtx)->debug().errInfo = e.toStatus();
         LastError::get(opCtx->getClient()).setLastError(e.code(), e.reason());
-        crb.reset();
-        BSONObjBuilder bob = crb.getBodyBuilder();
+        replyBuilder->reset();
+        BSONObjBuilder bob = replyBuilder->getBodyBuilder();
         CommandHelpers::appendCommandStatusNoThrow(bob, e.toStatus());
         appendRequiredFieldsToResponse(opCtx, &bob);
     }
@@ -569,7 +569,7 @@ DbResponse Strategy::clientCommand(OperationContext* opCtx, const Message& m) {
         std::string db = request.getDatabase().toString();
         try {
             LOG(3) << "Command begin db: " << db << " msg id: " << m.header().getId();
-            runCommand(opCtx, request, m.operation(), reply->getInPlaceReplyBuilder(0));
+            runCommand(opCtx, request, m.operation(), reply.get());
             LOG(3) << "Command end db: " << db << " msg id: " << m.header().getId();
         } catch (const DBException& ex) {
             LOG(1) << "Exception thrown while processing command on " << db
@@ -584,7 +584,7 @@ DbResponse Strategy::clientCommand(OperationContext* opCtx, const Message& m) {
             throw;
         }
         reply->reset();
-        auto bob = reply->getInPlaceReplyBuilder(0);
+        auto bob = reply->getBodyBuilder(0);
         CommandHelpers::appendCommandStatusNoThrow(bob, ex.toStatus());
         appendRequiredFieldsToResponse(opCtx, &bob);
     }
@@ -730,11 +730,10 @@ void Strategy::killCursors(OperationContext* opCtx, DbMessage* dbm) {
 }
 
 void Strategy::writeOp(OperationContext* opCtx, DbMessage* dbm) {
-    BufBuilder bb;
+    const auto& msg = dbm->msg();
+    auto reply = rpc::makeReplyBuilder(rpc::Protocol::kOpMsg);
     runCommand(opCtx,
                [&]() {
-                   const auto& msg = dbm->msg();
-
                    switch (msg.operation()) {
                        case dbInsert: {
                            return InsertOp::parseLegacy(msg).serialize({});
@@ -749,8 +748,8 @@ void Strategy::writeOp(OperationContext* opCtx, DbMessage* dbm) {
                            MONGO_UNREACHABLE;
                    }
                }(),
-               dbm->msg().operation(),
-               BSONObjBuilder{bb});  // built object is ignored
+               msg.operation(),
+               reply.get());  // built object is ignored
 }
 
 void Strategy::explainFind(OperationContext* opCtx,

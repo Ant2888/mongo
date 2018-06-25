@@ -52,7 +52,8 @@ public:
     LegacyReplyBuilder& setCommandReply(Status nonOKStatus, BSONObj extraErrorInfo) final;
     LegacyReplyBuilder& setRawCommandReply(const BSONObj& commandReply) final;
 
-    BSONObjBuilder getInPlaceReplyBuilder(std::size_t) final;
+    BSONObjBuilder getBodyBuilder(std::size_t reserveBytes) final;
+    BSONObjBuilder getBodyBuilder() final;
 
     LegacyReplyBuilder& setMetadata(const BSONObj& metadata) final;
 
@@ -66,6 +67,7 @@ private:
     enum class State { kMetadata, kCommandReply, kOutputDocs, kDone };
 
     BufBuilder _builder{};
+    std::size_t _bodyOffset = 0;
     Message _message;
     State _state{State::kCommandReply};
     // For stale config errors we need to set the correct ResultFlag.

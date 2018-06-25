@@ -33,6 +33,7 @@
 #include "mongo/base/disallow_copying.h"
 #include "mongo/base/status.h"
 #include "mongo/bson/util/builder.h"
+#include "mongo/rpc/op_msg.h"
 #include "mongo/rpc/protocol.h"
 
 namespace mongo {
@@ -58,9 +59,26 @@ public:
     virtual ReplyBuilderInterface& setRawCommandReply(const BSONObj& reply) = 0;
 
     /**
-     * Returns a BSONObjBuilder for building a command reply in place.
+     * Returns a BSONObjBuilder that can be used to build the reply in-place. The returned
+     * builder (or an object into which it has been moved) must be completed before calling
+     * any more methods on this object. A builder is completed by a call to `done()` or by
+     * its destructor. Can be called repeatedly to append multiple things to the reply, as
+     * long as each returned builder must be completed between calls.
      */
-    virtual BSONObjBuilder getInPlaceReplyBuilder(std::size_t reserveBytes) = 0;
+    virtual BSONObjBuilder getBodyBuilder() {
+        uasserted(99981, "Continued use of builder is not supported by this derivative");
+    }
+    virtual BSONObjBuilder getBodyBuilder(const std::size_t) {
+        return getBodyBuilder();
+    }
+
+    /**
+     * Returns a DocSeqBuilder for building a command reply in place. This should only be called
+     * before the body as the body will have status types appended at the end.
+     */
+    virtual OpMsgBuilder::DocSequenceBuilder getDocSequenceBuilder(StringData name) {
+        uasserted(99980, "Only OpMsg's may use document sequences");
+    }
 
     virtual ReplyBuilderInterface& setMetadata(const BSONObj& metadata) = 0;
 
@@ -104,8 +122,31 @@ public:
      */
     virtual Message done() = 0;
 
+    /**
+     * The specified 'object' must be BSON-serializable.
+     *
+     * BSONSerializable 'x' means 'x.serialize(bob)' appends a representation of 'x'
+     * into 'BSONObjBuilder* bob'.
+     */
+    template <typename T>
+    void fillFrom(const T& object) {
+        static_assert(!isStatusOrStatusWith<std::decay_t<T>>,
+                      "Status and StatusWith<T> aren't supported by TypedCommand and fillFrom(). "
+                      "Use uassertStatusOK() instead.");
+        auto bob = getBodyBuilder();
+        object.serialize(&bob);
+    }
+
+    /**
+     * Sets the bytes that should be reserved for the body portion via the BSONObjBuilder.
+     */
+    inline void setReservedBytes(const std::size_t reservedBytes) {
+        _reserved = reservedBytes;
+    }
+
 protected:
     ReplyBuilderInterface() = default;
+    std::size_t _reserved = 0;
 };
 
 }  // namespace rpc

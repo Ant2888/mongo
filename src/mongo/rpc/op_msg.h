@@ -220,6 +220,18 @@ public:
      */
     static AtomicBool disableDupeFieldCheck_forTest;
 
+    /**
+     * Returns a BSONObj, similar to finish any calls on this object after are illegal.
+     */
+    BSONObj releaseBody();
+
+    /**
+     * Returns whether or not this builder is already building a body.
+     */
+    bool isBody() {
+        return _state == kBody;
+    }
+
 private:
     friend class DocSequenceBuilder;
 

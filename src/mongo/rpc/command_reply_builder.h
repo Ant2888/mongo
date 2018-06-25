@@ -57,7 +57,14 @@ public:
 
 
     CommandReplyBuilder& setRawCommandReply(const BSONObj& commandReply) final;
-    BSONObjBuilder getInPlaceReplyBuilder(std::size_t) final;
+    BSONObjBuilder getBodyBuilder(std::size_t) final;
+    BSONObjBuilder getBodyBuilder() final {
+        if (_state == State::kMetadata) {
+            invariant(_bodyOffset);
+            return BSONObjBuilder(BSONObjBuilder::ResumeBuildingTag(), _builder, _bodyOffset);
+        }
+        return getBodyBuilder(_reserved);
+    }
 
     CommandReplyBuilder& setMetadata(const BSONObj& metadata) final;
 
@@ -76,6 +83,7 @@ private:
     enum class State { kMetadata, kCommandReply, kOutputDocs, kDone };
 
     // Default values are all empty.
+    std::size_t _bodyOffset = 0;
     BufBuilder _builder{};
     Message _message;
     State _state{State::kCommandReply};

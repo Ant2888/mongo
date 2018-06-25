@@ -184,7 +184,7 @@ void OpMsg::shareOwnershipWith(const ConstSharedBuffer& buffer) {
 }
 
 auto OpMsgBuilder::beginDocSequence(StringData name) -> DocSequenceBuilder {
-    invariant(_state == kEmpty || _state == kDocSequence);
+    invariant(_state != kDone);
     invariant(!_openBuilder);
     _openBuilder = true;
     _state = kDocSequence;
@@ -245,6 +245,16 @@ Message OpMsgBuilder::finish() {
     // header.setResponseToMsgId(...);
     header.setOpCode(dbMsg);
     return Message(_buf.release());
+}
+
+BSONObj OpMsgBuilder::releaseBody() {
+    invariant(_state == kBody);
+    invariant(_bodyStart);
+    invariant(!_openBuilder);
+    _state = kDone;
+
+    auto bson = BSONObj(_buf.buf() + _bodyStart);
+    return bson.shareOwnershipWith(_buf.release());
 }
 
 }  // namespace mongo

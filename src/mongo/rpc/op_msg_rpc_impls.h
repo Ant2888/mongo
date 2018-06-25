@@ -59,13 +59,26 @@ public:
         _builder.beginBody().appendElements(reply);
         return *this;
     }
-    BSONObjBuilder getInPlaceReplyBuilder(std::size_t reserveBytes) override {
+    BSONObjBuilder getBodyBuilder(std::size_t reserveBytes) override {
+        if (_builder.isBody()) {
+            // should error?
+            return getBodyBuilder();
+        }
         BSONObjBuilder bob = _builder.beginBody();
         // Eagerly reserve space and claim our reservation immediately so we can actually write data
         // to it.
         bob.bb().reserveBytes(reserveBytes);
         bob.bb().claimReservedBytes(reserveBytes);
         return bob;
+    }
+    BSONObjBuilder getBodyBuilder() override {
+        if (!_builder.isBody()) {
+            return getBodyBuilder(_reserved);
+        }
+        return _builder.resumeBody();
+    }
+    OpMsgBuilder::DocSequenceBuilder getDocSequenceBuilder(StringData name) override {
+        return _builder.beginDocSequence(name);
     }
     ReplyBuilderInterface& setMetadata(const BSONObj& metadata) override {
         _builder.resumeBody().appendElements(metadata);
@@ -79,6 +92,9 @@ public:
     }
     Message done() override {
         return _builder.finish();
+    }
+    BSONObj release() {
+        return _builder.releaseBody();
     }
 
 private:
