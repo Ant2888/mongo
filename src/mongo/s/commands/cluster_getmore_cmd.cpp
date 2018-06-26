@@ -44,20 +44,72 @@ namespace {
  * corresponding to the cursor id passed from the application. In order to generate these results,
  * may issue getMore commands to remote nodes in one or more shards.
  */
-class ClusterGetMoreCmd final : public BasicCommand {
-    MONGO_DISALLOW_COPYING(ClusterGetMoreCmd);
+class ClusterGetMoreCmd final : public TypedCommand<ClusterGetMoreCmd> {
+public: 
+    struct Request {
+        static constexpr auto kCommandName = "getMore"_sd;
+        static Request parse(const IDLParserErrorContext&, const OpMsgRequest& request){
+            return Request{request};
+        }
 
-public:
-    ClusterGetMoreCmd() : BasicCommand("getMore") {}
+        const OpMsgRequest& request;
+    };
 
-    std::string parseNs(const std::string& dbname, const BSONObj& cmdObj) const final {
-        return GetMoreRequest::parseNs(dbname, cmdObj).ns();
+    class Invocation final : public MinimalInvocationBase {
+    public:
+        using MinimalInvocationBase::MinimalInvocationBase;
+
+    private:
+        NamespaceString ns() {
+            auto dbName = request().request.getDatabase().toString();
+            return GetMoreRequest::parseNs(dbName, request().body);
+        }
+
+        virtual bool supportsWriteConcern(const BSONObj& cmd) const override {
+            return false;
+        }
+
+        Status checkAuthForCommand(Client* client,
+                        const std::string& dbname,
+                        const BSONObj& cmdObj) const final {
+            StatusWith<GetMoreRequest> parseStatus = GetMoreRequest::parseFromBSON(dbname, cmdObj);
+            if (!parseStatus.isOK()) {
+                return parseStatus.getStatus();
+            }
+            const GetMoreRequest& request = parseStatus.getValue();
+
+            return AuthorizationSession::get(client)->checkAuthForGetMore(
+                request.nss, request.cursorid, request.term.is_initialized());
+        }
+
+        void doCheckAuthorization(OperationContext* opCtx) const override {
+            auto dbName = request().request.getDatabase().toString();
+            uassertStatusOK(checkAuthForCommand(opCtx, dbName, request().request.body));
+        }
+
+        void run(OperationContext* opCtx, rpc::ReplyBuilderInterface* reply) final {
+            // Counted as a getMore, not as a command.
+            globalOpCounters.gotGetMore();
+
+            StatusWith<GetMoreRequest> parseStatus = GetMoreRequest::parseFromBSON(dbname, cmdObj);
+            uassertStatusOK(parseStatus.getStatus());
+            const GetMoreRequest& request = parseStatus.getValue();
+            
+            auto bob = reply->getBodyBuilder();
+            try {
+                auto response = ClusterFind::runGetMore(opCtx, request);
+                uassertStatusOK(response.getStatus());
+
+                response.getValue().addToBSON(CursorResponse::ResponseType::SubsequentResponse, &reply->getBodyBuilder());
+                CommandHelpers::appendSimpleCommandStatus(bob, true);
+            } catch (const ExceptionFor<ErrorCodes::Unauthorized>& e) {
+                CommandHelpers::auditLogAuthEvent(opCtx, this, *_request, e.code());
+                throw;
+            }
+        }
+
     }
-
-    virtual bool supportsWriteConcern(const BSONObj& cmd) const override {
-        return false;
-    }
-
+    
     AllowedOnSecondary secondaryAllowed(ServiceContext*) const final {
         return AllowedOnSecondary::kAlways;
     }
@@ -84,39 +136,8 @@ public:
     LogicalOp getLogicalOp() const final {
         return LogicalOp::opGetMore;
     }
-
-    Status checkAuthForCommand(Client* client,
-                               const std::string& dbname,
-                               const BSONObj& cmdObj) const final {
-        StatusWith<GetMoreRequest> parseStatus = GetMoreRequest::parseFromBSON(dbname, cmdObj);
-        if (!parseStatus.isOK()) {
-            return parseStatus.getStatus();
-        }
-        const GetMoreRequest& request = parseStatus.getValue();
-
-        return AuthorizationSession::get(client)->checkAuthForGetMore(
-            request.nss, request.cursorid, request.term.is_initialized());
-    }
-
-    bool run(OperationContext* opCtx,
-             const std::string& dbname,
-             const BSONObj& cmdObj,
-             BSONObjBuilder& result) final {
-        // Counted as a getMore, not as a command.
-        globalOpCounters.gotGetMore();
-
-        StatusWith<GetMoreRequest> parseStatus = GetMoreRequest::parseFromBSON(dbname, cmdObj);
-        uassertStatusOK(parseStatus.getStatus());
-        const GetMoreRequest& request = parseStatus.getValue();
-
-        auto response = ClusterFind::runGetMore(opCtx, request);
-        uassertStatusOK(response.getStatus());
-
-        response.getValue().addToBSON(CursorResponse::ResponseType::SubsequentResponse, &result);
-        return true;
-    }
-
-} cmdGetMoreCluster;
+};
+constexpr StringData ClusterGetMoreCmd::Request::kCommandName;
 
 }  // namespace
 }  // namespace mongo
