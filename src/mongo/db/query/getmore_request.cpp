@@ -50,6 +50,7 @@ const char kBatchSizeField[] = "batchSize";
 const char kAwaitDataTimeoutField[] = "maxTimeMS";
 const char kTermField[] = "term";
 const char kLastKnownCommittedOpTimeField[] = "lastKnownCommittedOpTime";
+const char kTempOptInToDocumentSequencesField[] = "tempOptInToDocumentSequences";
 
 }  // namespace
 
@@ -112,7 +113,7 @@ StatusWith<GetMoreRequest> GetMoreRequest::parseFromBSON(const std::string& dbna
     boost::optional<Milliseconds> awaitDataTimeout;
     boost::optional<long long> term;
     boost::optional<repl::OpTime> lastKnownCommittedOpTime;
-
+    boost::optional<bool> tempOptInToDocumentSequences;
     for (BSONElement el : cmdObj) {
         const auto fieldName = el.fieldNameStringData();
         if (fieldName == kGetMoreCommandName) {
@@ -159,6 +160,12 @@ StatusWith<GetMoreRequest> GetMoreRequest::parseFromBSON(const std::string& dbna
                 return status;
             }
             lastKnownCommittedOpTime = ot;
+        } else if (fieldName == kTempOptInToDocumentSequencesField) {
+            if (!el.isBoolean()){
+                return {ErrorCodes::TypeMismatch,
+                        str::stream() << "Field 'tempOptInToDocumentSequences' must be of type Bool in: " << cmdObj};
+            }
+            tempOptInToDocumentSequences = el.boolean();
         } else if (!isGenericArgument(fieldName)) {
             return {ErrorCodes::FailedToParse,
                     str::stream() << "Failed to parse: " << cmdObj << ". "

@@ -87,6 +87,8 @@ struct GetMoreRequest {
     // Only internal queries from replication will have a last known committed optime.
     const boost::optional<repl::OpTime> lastKnownCommittedOpTime;
 
+    // Temporary flag for enabling DocumentSequence returns.
+    const boost::optional<bool> tempOptInToDocumentSequences;
 private:
     /**
      * Returns a non-OK status if there are semantic errors in the parsed request

@@ -495,6 +495,9 @@ private:
     bool _exhaust = false;
     bool _allowPartialResults = false;
 
+    // Temporary flag for enabling DocumentSequence returns.
+    bool _tempOptInToDocumentSequences = false;
+
     boost::optional<long long> _replicationTerm;
 };
 

@@ -99,6 +99,7 @@ const char kAwaitDataField[] = "awaitData";
 const char kPartialResultsField[] = "allowPartialResults";
 const char kTermField[] = "term";
 const char kOptionsField[] = "options";
+const char kTempOptInToDocumentSequencesField[] = "tempOptInDocumentSequences";
 
 // Field names for sorting options.
 const char kNaturalSortField[] = "$natural";
@@ -364,6 +365,13 @@ StatusWith<unique_ptr<QueryRequest>> QueryRequest::parseFromFindCommand(unique_p
                 return status;
             }
             qr->_replicationTerm = el._numberLong();
+        } else if (fieldName == kTempOptInToDocumentSequencesField) {
+            Status status = checkFieldType(el, Bool);
+            if (!status.isOK()) {
+                return status;
+            }
+
+            qr->_tempOptInToDocumentSequences = el.boolean();
         } else if (!isGenericArgument(fieldName)) {
             return Status(ErrorCodes::FailedToParse,
                           str::stream() << "Failed to parse: " << cmdObj.toString() << ". "
