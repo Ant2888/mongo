@@ -35,6 +35,8 @@
 #include "mongo/bson/bsonobj.h"
 #include "mongo/db/clientcursor.h"
 #include "mongo/db/namespace_string.h"
+#include "mongo/rpc/op_msg.h"
+#include "mongo/rpc/reply_builder_interface.h"
 
 namespace mongo {
 
@@ -47,14 +49,23 @@ class CursorResponseBuilder {
 
 public:
     /**
-     * Once constructed, you may not use the passed-in BSONObjBuilder until you call either done()
+     * Structure used to confiugre the CursorResponseBuilder.
+     */
+    struct Options {
+        bool useDocumentSequences = false;
+        bool isInitialResponse = false;
+    };
+
+    /**
+     * Once constructed, you may not use the passed-in ReplyBuilderInterface until you call either
+     * done()
      * or abandon(), or this object goes out of scope. This is the same as the rule when using a
      * BSONObjBuilder to build a sub-object with subobjStart().
      *
-     * If the builder goes out of scope without a call to done(), any data appended to the
-     * builder will be removed.
+     * If the builder goes out of scope without a call to done(), the ReplyBuilderInterface will be
+     * reset.
      */
-    CursorResponseBuilder(bool isInitialResponse, BSONObjBuilder* commandResponse);
+    CursorResponseBuilder(rpc::ReplyBuilderInterface* replyBuilder, Options options);
 
     ~CursorResponseBuilder() {
         if (_active)
@@ -63,13 +74,18 @@ public:
 
     size_t bytesUsed() const {
         invariant(_active);
-        return _batch.len();
+        return _bytes;
     }
 
     void append(const BSONObj& obj) {
         invariant(_active);
-        _batch.append(obj);
+        if (_options.useDocumentSequences) {
+            _docSeqBuilder->append(obj);
+        } else {
+            _batch->append(obj);
+        }
         _numDocs++;
+        _bytes += obj.objsize();
     }
 
     void setLatestOplogTimestamp(Timestamp ts) {
@@ -94,11 +110,15 @@ public:
     void abandon();
 
 private:
-    const int _responseInitialLen;  // Must be the first member so its initializer runs first.
+    const Options _options;
+    rpc::ReplyBuilderInterface* const _replyBuilder;
+    std::unique_ptr<OpMsgBuilder::DocSequenceBuilder> _docSeqBuilder;
+    std::unique_ptr<BSONArrayBuilder> _batch;
+    std::unique_ptr<BSONObjBuilder> _bodyBuilder;
+    std::unique_ptr<BSONObjBuilder> _cursorObject;
+
+    size_t _bytes = 0;
     bool _active = true;
-    BSONObjBuilder* const _commandResponse;
-    BSONObjBuilder _cursorObject;
-    BSONArrayBuilder _batch;
     long long _numDocs = 0;
     Timestamp _latestOplogTimestamp;
 };
