@@ -44,34 +44,54 @@ const char kIdField[] = "id";
 const char kNsField[] = "ns";
 const char kBatchField[] = "nextBatch";
 const char kBatchFieldInitial[] = "firstBatch";
+const char kBatchDocSequenceField[] = "cursor.nextBatch";
+const char kBatchDocSequenceFieldInitial[] = "cursor.firstBatch";
 const char kInternalLatestOplogTimestampField[] = "$_internalLatestOplogTimestamp";
 
 }  // namespace
 
-CursorResponseBuilder::CursorResponseBuilder(bool isInitialResponse,
-                                             BSONObjBuilder* commandResponse)
-    : _responseInitialLen(commandResponse->bb().len()),
-      _commandResponse(commandResponse),
-      _cursorObject(commandResponse->subobjStart(kCursorField)),
-      _batch(_cursorObject.subarrayStart(isInitialResponse ? kBatchFieldInitial : kBatchField)) {}
+CursorResponseBuilder::CursorResponseBuilder(rpc::ReplyBuilderInterface* replyBuilder,
+                                             Options options = Options())
+    : _options(options), _replyBuilder(replyBuilder) {
+    if (_options.useDocumentSequences) {
+        _docSeqBuilder =
+            std::make_unique<OpMsgBuilder::DocSequenceBuilder>(_replyBuilder->getDocSequenceBuilder(
+                _options.isInitialResponse ? kBatchDocSequenceFieldInitial
+                                           : kBatchDocSequenceField));
+    } else {
+        _bodyBuilder = std::make_unique<BSONObjBuilder>(_replyBuilder->getBodyBuilder());
+        _cursorObject = std::make_unique<BSONObjBuilder>(_bodyBuilder->subobjStart(kCursorField));
+        _batch = std::make_unique<BSONArrayBuilder>(_cursorObject->subarrayStart(
+            _options.isInitialResponse ? kBatchFieldInitial : kBatchField));
+    }
+}
 
 void CursorResponseBuilder::done(CursorId cursorId, StringData cursorNamespace) {
     invariant(_active);
-    _batch.doneFast();
-    _cursorObject.append(kIdField, cursorId);
-    _cursorObject.append(kNsField, cursorNamespace);
-    _cursorObject.doneFast();
-    if (!_latestOplogTimestamp.isNull()) {
-        _commandResponse->append(kInternalLatestOplogTimestampField, _latestOplogTimestamp);
+    if (_options.useDocumentSequences) {
+        _docSeqBuilder->done();
+        _bodyBuilder = std::make_unique<BSONObjBuilder>(_replyBuilder->getBodyBuilder());
+        _cursorObject = std::make_unique<BSONObjBuilder>(_bodyBuilder->subobjStart(kCursorField));
+    } else {
+        _batch->doneFast();
     }
+    _cursorObject->append(kIdField, cursorId);
+    _cursorObject->append(kNsField, cursorNamespace);
+    _cursorObject->doneFast();
+
+    if (!_latestOplogTimestamp.isNull()) {
+        _bodyBuilder->append(kInternalLatestOplogTimestampField, _latestOplogTimestamp);
+    }
+    _bodyBuilder->doneFast();
     _active = false;
 }
 
 void CursorResponseBuilder::abandon() {
     invariant(_active);
-    _batch.doneFast();
-    _cursorObject.doneFast();
-    _commandResponse->bb().setlen(_responseInitialLen);  // Removes everything we've added.
+    _batch->doneFast();
+    _cursorObject->doneFast();
+    _bodyBuilder->doneFast();
+    _replyBuilder->reset();
     _numDocs = 0;
     _active = false;
 }

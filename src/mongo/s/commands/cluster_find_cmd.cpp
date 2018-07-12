@@ -118,7 +118,7 @@ public:
 
         void explain(OperationContext* opCtx,
                      ExplainOptions::Verbosity verbosity,
-                     BSONObjBuilder* result) override {
+                     rpc::ReplyBuilderInterface* result) override {
             // Parse the command BSON to a QueryRequest.
             bool isExplain = true;
             auto qr =
@@ -149,15 +149,17 @@ public:
                 const char* mongosStageName =
                     ClusterExplain::getStageNameForReadOp(shardResponses.size(), _request.body);
 
+                auto bodyBuilder = result->getBodyBuilder();
                 uassertStatusOK(ClusterExplain::buildExplainResult(
                     opCtx,
                     ClusterExplain::downconvert(opCtx, shardResponses),
                     mongosStageName,
                     millisElapsed,
-                    result));
+                    &bodyBuilder));
 
             } catch (const ExceptionFor<ErrorCodes::CommandOnShardedViewNotSupportedOnMongod>& ex) {
-                result->resetToEmpty();
+                auto bodyBuilder = result->getBodyBuilder();
+                bodyBuilder.resetToEmpty();
 
                 auto aggCmdOnView = uassertStatusOK(qr->asAggregationCommand());
 
@@ -172,7 +174,7 @@ public:
                 nsStruct.executionNss = std::move(ex->getNamespace());
 
                 uassertStatusOK(ClusterAggregate::runAggregate(
-                    opCtx, nsStruct, resolvedAggRequest, resolvedAggCmd, result));
+                    opCtx, nsStruct, resolvedAggRequest, resolvedAggCmd, &bodyBuilder));
             }
         }
 
@@ -198,9 +200,11 @@ public:
                 std::vector<BSONObj> batch;
                 auto cursorId =
                     ClusterFind::runQuery(opCtx, *cq, ReadPreferenceSetting::get(opCtx), &batch);
-                auto bodyBuilder = result->getBodyBuilder();
+
                 // Build the response document.
-                CursorResponseBuilder firstBatch(/*firstBatch*/ true, &bodyBuilder);
+                CursorResponseBuilder::Options options;
+                options.isInitialResponse = true;
+                CursorResponseBuilder firstBatch(result, options);
                 for (const auto& obj : batch) {
                     firstBatch.append(obj);
                 }
