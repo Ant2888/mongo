@@ -55,7 +55,8 @@ struct GetMoreRequest {
                    boost::optional<std::int64_t> sizeOfBatch,
                    boost::optional<Milliseconds> awaitDataTimeout,
                    boost::optional<long long> term,
-                   boost::optional<repl::OpTime> lastKnownCommittedOpTime);
+                   boost::optional<repl::OpTime> lastKnownCommittedOpTime,
+                   boost::optional<bool> tempOptInToDocumentSequences = boost::none);
 
     /**
      * Construct a GetMoreRequest from the command specification and db name.
@@ -85,6 +86,8 @@ struct GetMoreRequest {
     // Only internal queries from replication will have a last known committed optime.
     const boost::optional<repl::OpTime> lastKnownCommittedOpTime;
 
+    // Temporary opt in flag for DocumentSequences.
+    const boost::optional<bool> tempOptInToDocumentSequences;
 private:
     /**
      * Returns a non-OK status if there are semantic errors in the parsed request
