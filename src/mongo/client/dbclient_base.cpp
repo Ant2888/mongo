@@ -248,7 +248,6 @@ std::pair<rpc::UniqueReply, DBClientBase*> DBClientBase::runCommandWithTarget(
                           << networkOpToString(replyMsg.operation())
                           << "' ",
             rpc::protocolForMessage(requestMsg) == commandReply->getProtocol());
-
     return {std::move(commandReply), this};
 }
 
@@ -267,8 +266,11 @@ std::tuple<bool, DBClientBase*> DBClientBase::runCommandWithTarget(const string&
     // requestBuilder is a legacyRequest builder. Not sure what the best
     // way to get around that is without breaking the abstraction.
     auto result = runCommandWithTarget(rpc::upconvertRequest(dbname, std::move(cmd), options));
-
-    info = result.first->getCommandReply().getOwned();
+    if (result.first->hasDocumentSequences()) {
+        _foldDocumentSequences(result.first, info);
+    } else {
+        info = result.first->getCommandReply().getOwned();
+    }
     return std::make_tuple(isOk(info), result.second);
 }
 
@@ -281,8 +283,27 @@ std::tuple<bool, std::shared_ptr<DBClientBase>> DBClientBase::runCommandWithTarg
     auto result =
         runCommandWithTarget(rpc::upconvertRequest(dbname, std::move(cmd), options), std::move(me));
 
-    info = result.first->getCommandReply().getOwned();
+    if (result.first->hasDocumentSequences()) {
+        _foldDocumentSequences(result.first, info);
+    } else {
+        info = result.first->getCommandReply().getOwned();
+    }
+
     return std::make_tuple(isOk(info), result.second);
+}
+
+void DBClientBase::_foldDocumentSequences(const rpc::UniqueReply& reply, BSONObj& info) {
+    auto bodyRes = reply->getCommandReply().getOwned();
+    BSONObjBuilder builder(bodyRes);
+    const auto& docSeqs = reply->getDocumentSequences();
+    for (auto& doc : docSeqs) {
+        BSONArrayBuilder array(builder.subarrayStart(doc.name));
+        for (auto& bson : doc.objs) {
+            array.append(bson.getOwned());
+        }
+        array.doneFast();
+    }
+    info = builder.obj();
 }
 
 bool DBClientBase::runCommand(const string& dbname, BSONObj cmd, BSONObj& info, int options) {
@@ -917,6 +938,7 @@ void DBClientBase::createIndexes(StringData ns, const std::vector<const IndexSpe
         uassertStatusOK(runCommandStatus);
     }
 }
+
 
 BSONElement getErrField(const BSONObj& o) {
     return o["$err"];
