@@ -693,8 +693,6 @@ protected:
     static AtomicInt64 ConnectionIdSequence;
     long long _connectionId;  // unique connection id for this connection
 
-    // should this be protected?
-    void _foldDocumentSequences(const rpc::UniqueReply& reply, BSONObj& info);
 private:
     /**
      * The rpc protocols this client supports.
