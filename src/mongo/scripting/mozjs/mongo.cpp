@@ -30,6 +30,8 @@
 
 #include "mongo/scripting/mozjs/mongo.h"
 
+#include <boost/algorithm/string/split.hpp>
+
 #include "mongo/bson/simple_bsonelement_comparator.h"
 #include "mongo/client/dbclient_base.h"
 #include "mongo/client/dbclient_rs.h"
@@ -170,6 +172,50 @@ void setHiddenMongo(JSContext* cx,
         o.defineProperty(InternedString::_mongo, value, JSPROP_READONLY | JSPROP_PERMANENT);
     }
 }
+
+void foldDocumentSequences(JSContext* cx, JS::CallArgs& args, 
+                           const std::vector<OpMsg::DocumentSequence>& docSequences,
+                           const BSONObj& parent) {
+    ObjectWrapper body(cx, args.rval());
+    for (const auto& sequence : docSequences) {
+        // The entire dotted path will need to be traversed in most cases.
+        std::vector<std::string> strs;
+        boost::split(strs, sequence.name, [](char c) { return c == '.'; });
+        uassert('0', "A name was not specified for the DocumentSequence.", strs.size() > 0);
+
+        JS::RootedValue refVal(cx);
+        std::string objName;
+        for (unsigned i = 0; i < strs.size() - 1; ++i) {
+            ObjectWrapper::Key k(strs[i].c_str());
+            if (!body.hasField(k)) {
+                // Avoid making empty subobjects by making the key the rest of the path.
+                while (i < strs.size() - 1) {
+                    objName.append(strs[i++]);
+                    objName.append(".");                    
+                }
+                break;
+            }
+            body.getValue(k, &refVal);
+            body = ObjectWrapper(cx, refVal);
+        }
+        objName.append(strs[strs.size()-1]);
+
+        JS::AutoValueVector avv(cx);
+        for (const auto& bson : sequence.objs) {
+            JS::RootedValue member(cx);
+            ValueReader(cx, &member).fromBSON(bson, &parent, false);
+            if (!avv.append(member)) {
+                uasserted(ErrorCodes::JSInterpreterFailure, "Failed to append to JS array");
+            }
+        }
+        JS::RootedObject array(cx, JS_NewArrayObject(cx, avv));
+        if (!array) {
+            uasserted(ErrorCodes::JSInterpreterFailure, "Failed to JS_NewArrayObject");
+        }
+        body.setObject(objName.c_str(), array);
+        body = ObjectWrapper(cx, args.rval());
+    }
+}
 }  // namespace
 
 void MongoBase::finalize(JSFreeOp* fop, JSObject* obj) {
@@ -211,13 +257,16 @@ void MongoBase::Functions::runCommand::call(JSContext* cx, JS::CallArgs args) {
     BSONObj cmdObj = ValueWriter(cx, args.get(1)).toBSON();
 
     int queryOptions = ValueWriter(cx, args.get(2)).toInt32();
-    BSONObj cmdRes;
-    auto resTuple = conn->runCommandWithTarget(database, cmdObj, cmdRes, conn, queryOptions);
+    auto resTuple = conn->runCommandWithTarget(database, cmdObj, conn, queryOptions);
+    auto reply = std::move(std::get<0>(resTuple));
+    auto bodyRes = reply->getCommandReply().getOwned();
 
-    // the returned object is not read only as some of our tests depend on modifying it.
-    //
-    // Also, we make a copy here because we want a copy after we dump cmdRes
-    ValueReader(cx, args.rval()).fromBSON(cmdRes.getOwned(), nullptr, false /* read only */);
+    // The returned object is not read only as some of our tests depend on modifying it.
+    // Also, we make a copy here because we want a copy after we dump bodyRes
+    ValueReader(cx, args.rval()).fromBSON(bodyRes.getOwned(), nullptr, false);
+    if (reply->hasDocumentSequences()) {
+        foldDocumentSequences(cx, args, reply->getDocumentSequences(), bodyRes);
+    }
     setHiddenMongo(cx, std::get<1>(resTuple), conn.get(), args);
 }
 

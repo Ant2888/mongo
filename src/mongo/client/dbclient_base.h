@@ -246,18 +246,16 @@ public:
      *
      * This is used in the shell so that cursors can send getMore through the correct connection.
      */
-    std::tuple<bool, DBClientBase*> runCommandWithTarget(const std::string& dbname,
+    std::tuple<rpc::UniqueReply, DBClientBase*> runCommandWithTarget(const std::string& dbname,
                                                          BSONObj cmd,
-                                                         BSONObj& info,
                                                          int options = 0);
 
     /**
      * See the opMsg overload comment for why this function takes a shared_ptr ostensibly to this.
      */
-    std::tuple<bool, std::shared_ptr<DBClientBase>> runCommandWithTarget(
+    std::tuple<rpc::UniqueReply, std::shared_ptr<DBClientBase>> runCommandWithTarget(
         const std::string& dbname,
         BSONObj cmd,
-        BSONObj& info,
         std::shared_ptr<DBClientBase> me,
         int options = 0);
 
