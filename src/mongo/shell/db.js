@@ -151,7 +151,6 @@ var DB;
         // Support users who call this function with a string commandName, e.g.
         // db.runCommand("commandName", {arg1: "value", arg2: "value"}).
         var mergedObj = this._mergeCommandOptions(obj, extra);
-
         // if options were passed (i.e. because they were overridden on a collection), use them.
         // Otherwise use getQueryOptions.
         var options =
@@ -214,7 +213,9 @@ var DB;
 
             delete optcpy['useCursor'];
         }
-
+        if (!('tempOptInToDocumentSequences' in optcpy) && this.getMongo().useDocumentSequences()) {
+            optcpy['tempOptInToDocumentSequences'] = true;
+        }
         const maxAwaitTimeMS = optcpy.maxAwaitTimeMS;
         delete optcpy.maxAwaitTimeMS;
 

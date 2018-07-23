@@ -106,10 +106,14 @@ DBQuery.prototype._exec = function() {
         this._cursorSeen = 0;
 
         if (this._mongo.useReadCommands() && this._canUseFindCommand()) {
+            if (this._mongo.useDocumentSequences()) {
+                this._useDocumentSequences = true;
+            }
             var canAttachReadPref = true;
             var findCmd = this._convertToCommand(canAttachReadPref);
             var cmdRes = this._db.runReadCommand(findCmd, null, this._options);
             this._cursor = new DBCommandCursor(this._db, cmdRes, this._batchSize);
+
         } else {
             // The exhaust cursor option is disallowed under a session because it doesn't work as
             // expected, but all requests from the shell use implicit sessions, so to allow users
@@ -251,6 +255,10 @@ DBQuery.prototype._convertToCommand = function(canAttachReadPref) {
             var prefObj = this._query.$readPreference;
             cmd = this._db._attachReadPreferenceToCommand(cmd, prefObj);
         }
+    }
+
+    if (this._useDocumentSequences) {
+        cmd["tempOptInToDocumentSequences"] = true;
     }
 
     return cmd;
@@ -712,6 +720,10 @@ function DBCommandCursor(db, cmdResult, batchSize, maxAwaitTimeMS, txnNumber) {
         this._db = db;
         this._collName = this._ns.substr(this._ns.indexOf(".") + 1);
 
+        if (db.getMongo().useDocumentSequences()) {
+            this._useDocumentSequences = true;
+        }
+
         if (cmdResult.cursor.id) {
             // Note that setting this._cursorid to 0 should be accompanied by
             // this._cursorHandle.zeroCursorId().
@@ -773,6 +785,10 @@ DBCommandCursor.prototype._runGetMoreCommand = function() {
 
     if (this._batchSize) {
         getMoreCmd["batchSize"] = this._batchSize;
+    }
+
+    if (this._useDocumentSequences) {
+        getMoreCmd["tempOptInToDocumentSequences"] = true;
     }
 
     // maxAwaitTimeMS is only supported when using read commands.

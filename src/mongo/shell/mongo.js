@@ -388,6 +388,61 @@ Mongo.prototype.readMode = function() {
     return this._readMode;
 };
 
+/**
+ * Returns true if the shell is configured to use document sequence returns rather than 
+ * returning documents in the BSON body
+ */
+Mongo.prototype.useDocumentSequences = function() {
+    return (this.documentMode() === "documentSequences");
+};
+
+/**
+ * For testing, forces the shell to use the documentMode specified in 'mode'. Must be either 
+ * "documentSequences" (use document sequences over wire protocol), "legacy" (use legacy BSON body wire protocol returns),
+ * or "compatibility" (auto-detect mode based on wire version).
+ */
+Mongo.prototype.forceDocumentMode = function(mode) {
+    if (mode !== "documentSequences" && mode !== "compatibility" && mode !== "legacy") {
+        throw new Error("Mode must be one of {documentSequences, compatibility, legacy}, but got: " + mode);
+    }
+
+    this._documentMode = mode;
+};
+
+/**
+ * Get the documentMode string (either "documentSequences", "legacy" for returning documents in the BSON 
+ * body, or "compatibility" for detecting based on wire version).
+ */
+Mongo.prototype.documentMode = function() {
+    // Get the documentMode from the shell params if we don't have one yet.
+    if (typeof _documentMode === "function" && !this.hasOwnProperty("_documentMode")) {
+        this._documentMode = _documentMode();
+    }
+
+    if (this.hasOwnProperty("_documentMode") && this._documentMode !== "compatibility") {
+        // We already have determined our document mode. Just return it.
+        return this._documentMode;
+    } else {
+        // We're in compatibility mode. Determine whether the server supports document sequences. If it does, 
+	// use document sequences mode. If not, degrade to legacy mode.
+        try {
+            var hasDocumentSequences = (this.getMinWireVersion() <= 8 && 8 <= this.getMaxWireVersion());
+            if (hasDocumentSequences) {
+                this._documentMode = "documentSequences";
+            } else {
+                this._documentMode= "legacy";
+            }
+        } catch (e) {
+            // We failed trying to determine whether the remote node supports document seqences.
+            // In this case, we keep _readMode as "compatibility" and the shell should issue 
+	    // legacy reads. Next time around we will issue another isMaster to try to determine 
+	    // the readMode decisively.
+        }
+    }
+
+    return this._documentMode;
+};
+
 //
 // Write Concern can be set at the connection level, and is used for all write operations unless
 // overridden at the collection level.

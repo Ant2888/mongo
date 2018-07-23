@@ -50,8 +50,8 @@
 
 namespace mongo {
 
-using std::set;
 using std::map;
+using std::set;
 using std::string;
 
 namespace JSFiles {
@@ -60,7 +60,7 @@ extern const JSFile shardingtest;
 extern const JSFile servers_misc;
 extern const JSFile replsettest;
 extern const JSFile bridge;
-}
+}  // namespace JSFiles
 
 MONGO_REGISTER_SHIM(BenchRunConfig::createConnectionImpl)
 (const BenchRunConfig& config)->std::unique_ptr<DBClientBase> {
@@ -279,6 +279,10 @@ BSONObj readMode(const BSONObj&, void*) {
     return BSON("" << shellGlobalParams.readMode);
 }
 
+BSONObj documentMode(const BSONObj&, void*) {
+    return BSON("" << shellGlobalParams.documentMode);
+}
+
 BSONObj shouldRetryWrites(const BSONObj&, void* data) {
     return BSON("" << shellGlobalParams.shouldRetryWrites);
 }
@@ -324,6 +328,7 @@ void initScope(Scope& scope) {
     scope.injectNative("_useWriteCommandsDefault", useWriteCommandsDefault);
     scope.injectNative("_writeMode", writeMode);
     scope.injectNative("_readMode", readMode);
+    scope.injectNative("_documentMode", documentMode);
     scope.injectNative("_shouldRetryWrites", shouldRetryWrites);
     scope.injectNative("_shouldUseImplicitSessions", shouldUseImplicitSessions);
     scope.externalSetup();
@@ -477,5 +482,5 @@ bool fileExists(const std::string& file) {
 
 
 stdx::mutex& mongoProgramOutputMutex(*(new stdx::mutex()));
-}
+}  // namespace shell_utils
 }  // namespace mongo

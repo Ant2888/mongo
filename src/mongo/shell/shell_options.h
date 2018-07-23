@@ -72,6 +72,7 @@ struct ShellGlobalParams {
 
     std::string writeMode = "commands";
     std::string readMode = "compatibility";
+    std::string documentMode = "compatibility";
     bool shouldRetryWrites = false;
 
     boost::optional<rpc::ProtocolSet> rpcProtocols = boost::none;
@@ -94,4 +95,4 @@ bool handlePreValidationMongoShellOptions(const moe::Environment& params,
                                           const std::vector<std::string>& args);
 
 Status storeMongoShellOptions(const moe::Environment& params, const std::vector<std::string>& args);
-}
+}  // namespace mongo

@@ -208,6 +208,14 @@ Status addMongoShellOptions(moe::OptionSection* options) {
                             " commands, compatibility, legacy")
         .hidden();
 
+    options
+        ->addOptionChaining("documentMode",
+                            "documentMode",
+                            moe::String,
+                            "mode to determine how documents are returned from queries"
+                            " documentSequences, compatibility, legacy")
+        .hidden();
+
     options->addOptionChaining(
         "retryWrites",
         "retryWrites",
@@ -364,12 +372,21 @@ Status storeMongoShellOptions(const moe::Environment& params,
         if (mode != "commands" && mode != "compatibility" && mode != "legacy") {
             uasserted(17397,
                       mongoutils::str::stream()
-                          << "Unknown readMode option: '"
-                          << mode
+                          << "Unknown readMode option: '" << mode
                           << "'. Valid modes are: {commands, compatibility, legacy}");
         }
         shellGlobalParams.readMode = mode;
     }
+    if (params.count("documentMode")) {
+        std::string mode = params["documentMode"].as<string>();
+        if (mode != "documentSequences" && mode != "compatibility" && mode != "legacy") {
+            uasserted('0',
+                      mongoutils::str::stream()
+                          << "Unknown documentMode option: '" << mode
+                          << "'. Valid modes are: {documentSequences, compatibility, legacy}");
+        }
+        shellGlobalParams.documentMode = mode;
+        }
     if (params.count("retryWrites")) {
         shellGlobalParams.shouldRetryWrites = true;
     }
