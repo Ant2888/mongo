@@ -205,6 +205,8 @@ public:
                 // Build the response document.
                 CursorResponseBuilder::Options options;
                 options.isInitialResponse = true;
+                options.useDocumentSequences =
+                    cq->getQueryRequest().getTempOptInToDocumentSequences();
                 CursorResponseBuilder firstBatch(result, options);
                 for (const auto& obj : batch) {
                     firstBatch.append(obj);

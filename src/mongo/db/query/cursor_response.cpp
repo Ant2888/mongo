@@ -86,6 +86,7 @@ void CursorResponseBuilder::done(CursorId cursorId, StringData cursorNamespace) 
 
 void CursorResponseBuilder::abandon() {
     invariant(_active);
+    _docSeqBuilder.reset();
     _batch.reset();
     _cursorObject.reset();
     _bodyBuilder.reset();
@@ -244,6 +245,37 @@ void CursorResponse::addToBSON(CursorResponse::ResponseType responseType,
         builder->append("writeConcernError", *_writeConcernError);
     }
 }
+
+void CursorResponse::addToReply(CursorResponse::ResponseType responseType,
+                                rpc::ReplyBuilderInterface* reply, 
+                                bool useDocumentSequences) const {
+    if (!useDocumentSequences) {
+        auto bob = reply->getBodyBuilder();
+        addToBSON(responseType, &bob);
+        return;
+    }
+    const char* batchFieldName =
+        (responseType == ResponseType::InitialResponse) ? kBatchDocSequenceFieldInitial : kBatchDocSequenceField;
+    auto docSeq = reply->getDocSequenceBuilder(batchFieldName);
+    for(auto& obj : _batch) {
+        docSeq.append(obj);
+    }
+
+    auto bob = reply->getBodyBuilder();
+    BSONObjBuilder cursorBuilder(bob.subobjStart(kCursorField));
+    cursorBuilder.append(kIdField, _cursorId);
+    cursorBuilder.append(kNsField, _nss.ns());
+    cursorBuilder.doneFast();
+    if (_latestOplogTimestamp) {
+        bob.append(kInternalLatestOplogTimestampField, *_latestOplogTimestamp);
+    }
+        bob.append("ok", 1.0);
+
+    if (_writeConcernError) {
+        bob.append("writeConcernError", *_writeConcernError);
+    }
+}
+
 
 BSONObj CursorResponse::toBSON(CursorResponse::ResponseType responseType) const {
     BSONObjBuilder builder;

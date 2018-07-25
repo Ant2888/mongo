@@ -259,7 +259,8 @@ int runQueryWithReadCommands(DBClientBase* conn,
                 : boost::none,
             boost::none,   // maxTimeMS
             boost::none,   // term
-            boost::none);  // lastKnownCommittedOpTime
+            boost::none,
+            false);  // lastKnownCommittedOpTime
         BSONObj getMoreCommandResult;
         uassert(ErrorCodes::CommandFailed,
                 str::stream() << "getMore command failed; reply was: " << getMoreCommandResult,
@@ -1026,7 +1027,8 @@ void BenchRunOp::executeOnce(DBClientBase* conn,
                                                   boost::none,   // batchSize
                                                   boost::none,   // maxTimeMS
                                                   boost::none,   // term
-                                                  boost::none);  // lastKnownCommittedOpTime
+                                                  boost::none,
+                                                  false);  // lastKnownCommittedOpTime
                     BSONObj getMoreCommandResult;
                     uassert(ErrorCodes::CommandFailed,
                             str::stream() << "getMore command failed; reply was: "

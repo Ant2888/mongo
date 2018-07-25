@@ -323,6 +323,7 @@ public:
             // Stream query results, adding them to a BSONArray as we go.
             CursorResponseBuilder::Options options;
             options.isInitialResponse = true;
+            options.useDocumentSequences = originalQR.getTempOptInToDocumentSequences();
             CursorResponseBuilder firstBatch(result, options);
             BSONObj obj;
             PlanExecutor::ExecState state = PlanExecutor::ADVANCED;

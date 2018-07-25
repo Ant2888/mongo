@@ -125,8 +125,8 @@ BSONObj upconvertGetMoreEntry(const NamespaceString& nss, CursorId cursorId, int
                           ntoreturn,
                           boost::none,  // awaitDataTimeout
                           boost::none,  // term
-                          boost::none   // lastKnownCommittedOpTime
-                          )
+                          boost::none,   // lastKnownCommittedOpTime
+                          false)
         .toBSON();
 }
 

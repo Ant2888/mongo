@@ -143,7 +143,8 @@ Message DBClientCursor::_assembleGetMore() {
                                   boost::make_optional(batchSize != 0, batchSize),
                                   boost::none,   // awaitDataTimeout
                                   boost::none,   // term
-                                  boost::none);  // lastKnownCommittedOptime
+                                  boost::none,
+                                  false);  // lastKnownCommittedOptime
         return assembleCommandRequest(_client, ns.db(), opts, gmr.toBSON());
     } else {
         // Assemble a legacy getMore request.

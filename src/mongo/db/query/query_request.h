@@ -375,6 +375,14 @@ public:
         _replicationTerm = replicationTerm;
     }
 
+    bool getTempOptInToDocumentSequences() const {
+        return _tempOptInToDocumentSequences;
+    }
+
+    void setTempOptInToDocumentSequences(bool tempOptInToDocumentSequences) {
+        _tempOptInToDocumentSequences = tempOptInToDocumentSequences;
+    }
+
     /**
      * Return options as a bit vector.
      */
@@ -494,6 +502,7 @@ private:
     bool _noCursorTimeout = false;
     bool _exhaust = false;
     bool _allowPartialResults = false;
+    bool _tempOptInToDocumentSequences = false;
 
     boost::optional<long long> _replicationTerm;
 };

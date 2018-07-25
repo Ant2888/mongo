@@ -237,6 +237,12 @@ public:
     }
 
     /**
+     * Converts this response to its representation in a ReplyBuilderInterface. Note that this begins a body 
+     * and adding any DocumentSequences to the reply after this call is illegal.
+     */
+    void addToReply(ResponseType responseType, rpc::ReplyBuilderInterface* reply, bool useDocumentSequences) const;
+
+    /**
      * Converts this response to its raw BSON representation.
      */
     BSONObj toBSON(ResponseType responseType) const;
@@ -244,7 +250,6 @@ public:
     BSONObj toBSONAsInitialResponse() const {
         return toBSON(ResponseType::InitialResponse);
     }
-
 private:
     NamespaceString _nss;
     CursorId _cursorId;
