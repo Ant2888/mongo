@@ -1,0 +1,8 @@
+The tests assume the following in your ansible inventory:
+    - configdb: puts ALL configs in configdb[0]
+    - mongos
+    - loadgen
+    - shardnofail
+    - shardfail
+
+The recommended setup (aka - I have no idea if this would work otherwise) are Ubuntu 16.04 LTS machines, following the topology specified in the Doc.

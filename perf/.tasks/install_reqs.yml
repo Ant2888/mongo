@@ -1,0 +1,77 @@
+- name: Updating cache
+  become: yes
+  apt:
+    update_cache: yes
+
+- name: Increasing file-max
+  become: yes
+  lineinfile:
+    path: /etc/sysctl.conf
+    regexp: '^fs.file-max\s*=\s*1000000'
+    state: present
+    line: 'fs.file-max = 1000000'
+
+- name: Preparing ulimits
+  become: yes
+  copy:
+    src: limits.conf
+    dest: /etc/security/limits.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Setting ulimits
+  become: yes
+  replace:
+    path: /etc/security/limits.conf
+    regexp: "(.*)USER(.*)$"
+    replace: "\1{{ ansible_user }}\2"
+
+- name: Updating sysctl
+  become: yes
+  shell: sysctl -p
+
+- name: Installing dependencies
+  become: yes
+  apt:
+    update_cache: yes
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - ["build-essential", "tmux", "zip", "curl", "wget"]
+
+- name: Grabbing GPG key
+  become: yes
+  apt_key:
+    keyserver: keyserver.ubuntu.com
+    id: 9DA31620334BD75D9DCB49F368818C72E52529D4
+    state: present
+
+- name: Grabbing host name
+  shell: bash -lc "lsb_release -sc"
+  register: hostname
+  failed_when: hostname.stdout == ""
+
+- name: Adding mongodb to sources
+  become: yes
+  shell: echo "deb [ arch=amd64,arm64,ppc64el,s390x ] http://repo.mongodb.com/apt/ubuntu xenial/mongodb-enterprise/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-enterprise.list
+
+- name: Updating sources
+  become: yes
+  apt:
+    update_cache: yes
+  
+- name: Installing latest Mongodb Enterprise Edition
+  apt:
+    update_cache: yes
+    name: "mongodb-enterprise"
+    state: latest
+
+- name: Owning data dir
+  become: yes
+  file:
+    path: /data
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: 0777

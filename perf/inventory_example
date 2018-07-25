@@ -1,0 +1,14 @@
+[configdb]
+ec2-mongos ansible_connection=ssh ansible_user=ubuntu
+
+[mongos]
+ec2-mongos ansible_connection=ssh ansible_user=ubuntu
+
+[loadgen]
+ec2-loadgen ansible_connection=ssh ansible_user=ubuntu
+
+[shardnofail]
+ec2-shard ansible_connection=ssh ansible_user=ubuntu
+
+[shardfail]
+ec2-shard ansible_connection=ssh ansible_user=ubuntu

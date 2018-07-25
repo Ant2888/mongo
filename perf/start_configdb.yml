@@ -1,0 +1,37 @@
+---
+- hosts: configdb[0]
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+    cmd_start: 'mongod --config configdb.conf --port PORT --dbpath /data/cfgNUM'
+  tasks:
+    - name: Terminating existing mongo services
+      include_tasks: .tasks/shutdown.yml
+
+    - name: Copying over config
+      copy:
+        src: configdb.conf
+        dest: /data/configdb.conf
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+    
+    - name: Ensuring existing data dirs
+      state:
+        path: "{{ item }}"
+      register: stats
+      with_items:
+      -  ["/data/cfg1", "/data/cfg2", "/data/cfg3"]
+    
+    - name: Creating non-existing dirs
+      file:
+        path: "{{ item.item }}"
+        state: directory
+        mode: 0777
+        group: "{{ ansible_user }}"
+        owner: "{{ ansible_user }}"
+      when: item.stat.exists == false
+      with_items:
+      - "{{ stats.results }}"
+
+    - name: Starting each mongod
+      shell: 
