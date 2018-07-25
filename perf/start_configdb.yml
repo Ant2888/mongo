@@ -3,7 +3,10 @@
   remote_user: "{{ ansible_user }}"
   vars:
     ansible_python_interpreter: '/usr/bin/python3'
-    cmd_start: 'mongod --config configdb.conf --port PORT --dbpath /data/cfgNUM'
+    configdb: 3
+    base_port: 27000
+    cmd_temp: 'mongod --config configdb.conf --port PORT --dbpath /data/cfgNUM'
+    shell_command: '{% for _ind in range(configdb) %}{{ cmd_temp | replace("PORT", base_port+_ind) | replace("NUM", _ind+1) }} && {% endfor %}:'
   tasks:
     - name: Terminating existing mongo services
       include_tasks: .tasks/shutdown.yml
