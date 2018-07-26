@@ -215,6 +215,10 @@ var DB;
             delete optcpy['useCursor'];
         }
 
+        if (!('tempOptInToDocumentSequences' in optcpy) && this.getMongo().useReadCommands()) {
+            optcpy['tempOptInToDocumentSequences'] = true;
+        }
+
         const maxAwaitTimeMS = optcpy.maxAwaitTimeMS;
         delete optcpy.maxAwaitTimeMS;
 

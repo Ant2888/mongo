@@ -205,7 +205,7 @@ Status addMongoShellOptions(moe::OptionSection* options) {
                             "readMode",
                             moe::String,
                             "mode to determine how .find() queries are done:"
-                            " commands, compatibility, legacy")
+                            " commands, commandsNoDocumentSequences, compatibility, legacy")
         .hidden();
 
     options->addOptionChaining(
@@ -361,12 +361,14 @@ Status storeMongoShellOptions(const moe::Environment& params,
     }
     if (params.count("readMode")) {
         std::string mode = params["readMode"].as<string>();
-        if (mode != "commands" && mode != "compatibility" && mode != "legacy") {
+        if (mode != "commands" && mode != "commandsNoDocumentSequences" &&
+            mode != "compatibility" && mode != "legacy") {
             uasserted(17397,
                       mongoutils::str::stream()
                           << "Unknown readMode option: '"
                           << mode
-                          << "'. Valid modes are: {commands, compatibility, legacy}");
+                          << "'. Valid modes are: {commands, commandsNoDocumentSequences, "
+                             "compatibility, legacy}");
         }
         shellGlobalParams.readMode = mode;
     }

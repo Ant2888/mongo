@@ -333,7 +333,8 @@ Mongo.prototype.writeMode = function() {
 };
 
 /**
- * Returns true if the shell is configured to use find/getMore commands rather than the C++ client.
+ * Returns true if the shell is configured to use find/getMore commands with document sequences
+ * rather than the C++ client.
  *
  * Currently, the C++ client will always use OP_QUERY find and OP_GET_MORE.
  */
@@ -342,12 +343,25 @@ Mongo.prototype.useReadCommands = function() {
 };
 
 /**
- * For testing, forces the shell to use the readMode specified in 'mode'. Must be either "commands"
- * (use the find/getMore commands), "legacy" (use legacy OP_QUERY/OP_GET_MORE wire protocol reads),
- * or "compatibility" (auto-detect mode based on wire version).
+ * Returns true if the shell is configured to use find/getMore commands, with or without document
+ * sequences, rather than the C++ client.
+ *
+ * Currently, the C++ client will always use OP_QUERY find and OP_GET_MORE.
+ */
+Mongo.prototype.useReadCommandsNoDocumentSequences = function() {
+    var mode = this.readMode();
+    return (mode === "commandsNoDocumentSequences" || mode == "commands");
+};
+
+/**
+ * For testing, forces the shell to use the readMode specified in 'mode'. Must be either
+ * "commands"(use the find/getMore commands), "commandsNoDocumentSequences" (use the find/getMore
+ * commands without document sequencs) "legacy" (use legacy OP_QUERY/OP_GET_MORE wire protocol
+ * reads), or "compatibility" (auto-detect mode based on wire version).
  */
 Mongo.prototype.forceReadMode = function(mode) {
-    if (mode !== "commands" && mode !== "compatibility" && mode !== "legacy") {
+    if (mode !== "commands" && mode !== "commandsNoDocumentSequences" && mode !== "compatibility" &&
+        mode !== "legacy") {
         throw new Error("Mode must be one of {commands, compatibility, legacy}, but got: " + mode);
     }
 
@@ -371,9 +385,13 @@ Mongo.prototype.readMode = function() {
         // We're in compatibility mode. Determine whether the server supports the find/getMore
         // commands. If it does, use commands mode. If not, degrade to legacy mode.
         try {
-            var hasReadCommands = (this.getMinWireVersion() <= 4 && 4 <= this.getMaxWireVersion());
+            var hasReadCommands = (this.getMinWireVersion() <= 8 && 8 <= this.getMaxWireVersion());
+            var hasReadCommandsNoDocumentSequences =
+                (this.getMinWireVersion() <= 4 && 4 <= this.getMaxWireVersion());
             if (hasReadCommands) {
                 this._readMode = "commands";
+            } else if (hasReadCommandsNoDocumentSequences) {
+                this._readMode = "commandsNoDocumentSequences";
             } else {
                 this._readMode = "legacy";
             }
