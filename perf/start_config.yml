@@ -1,0 +1,13 @@
+---
+- hosts: configdb[0]
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+    configdb: 3
+    base_port: 27000
+    config_repl: "perf_test"
+    cmd_temp: 'mongod --config /data/configdb.conf --port PORT --dbpath /data/cfgNUM --fork --logpath /data/mongod.log'
+    shell_command: '{% for _ind in range(configdb) %}{{ cmd_temp | replace("PORT", base_port+_ind) | replace("NUM", _ind+1) }} && {% endfor %}:'
+  tasks:
+    - name: Starting each config server
+      shell: bash -lc "{{ shell_command }}"

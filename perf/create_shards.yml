@@ -1,29 +1,20 @@
 ---
-- hosts: configdb[0]
+- hosts: shardnofail:shardfail
   remote_user: "{{ ansible_user }}"
   vars:
     ansible_python_interpreter: '/usr/bin/python3'
-    configdb: 3
-    base_port: 27000
-    cmd_temp: 'mongod --config configdb.conf --port PORT --dbpath /data/cfgNUM'
-    shell_command: '{% for _ind in range(configdb) %}{{ cmd_temp | replace("PORT", base_port+_ind) | replace("NUM", _ind+1) }} && {% endfor %}:'
   tasks:
-    - name: Terminating existing mongo services
-      include_tasks: .tasks/shutdown.yml
-
     - name: Copying over config
       copy:
-        src: configdb.conf
-        dest: /data/configdb.conf
+        src: sharddb.conf
+        dest: /data/sharddb.conf
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
     
     - name: Ensuring existing data dirs
       state:
-        path: "{{ item }}"
+        path: "/data/shard"
       register: stats
-      with_items:
-      -  ["/data/cfg1", "/data/cfg2", "/data/cfg3"]
     
     - name: Creating non-existing dirs
       file:
@@ -35,6 +26,3 @@
       when: item.stat.exists == false
       with_items:
       - "{{ stats.results }}"
-
-    - name: Starting each mongod
-      shell: 

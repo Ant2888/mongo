@@ -1,0 +1,9 @@
+# This can all be called after the shards are created
+---
+- hosts: mongos
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+  tasks:
+    - name: Starting mongos
+      shell: bash -lc "mongos --config /data/mongos.conf"

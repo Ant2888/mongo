@@ -1,0 +1,25 @@
+# This can all be called after the shards are created
+---
+- hosts: shardnofail:shardfail
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+    base_port: 28000
+  tasks:
+    - name: Starting shards
+      shell: bash -lc "mongod --config /data/sharddb.conf --dbpath /data/shard --fork --logpath /data/mongod.log"
+
+- hosts: mongos
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+  tasks:
+    - name: Copying over config
+      copy:
+        src: mongos.conf
+        dest: /data/mongos.conf
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+# Didn't finish getting a way to determine the IP's atm, just fill in the mongos.conf manually
+# make sure to add the shards after

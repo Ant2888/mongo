@@ -1,0 +1,22 @@
+---
+- hosts: shardnofail:shardfail
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+  tasks:
+    - name: Starting shards
+      shell: bash -lc "mongod --config /data/sharddb.conf --port 28000 --fork --logpath /data/mongod.log --dbpath /data/shard"
+- hosts: shardnofail
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+  tasks:
+    - name: Creating db
+      shell: mongo --host localhost --port 28000 --eval "use test; db.s1.drop(); db.s1.insert({%raw%}{s: 1}{% endraw %});"
+- hosts: shardfail
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+  tasks:
+    - name: Creating db
+      shell: mongo --host localhost --port 28000 --eval "use test; db.s2.drop(); db.s2.insert({%raw%}{s: 2}{% endraw %});"
