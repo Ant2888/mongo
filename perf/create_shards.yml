@@ -11,18 +11,12 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
     
-    - name: Ensuring existing data dirs
-      state:
-        path: "/data/shard"
-      register: stats
-    
     - name: Creating non-existing dirs
       file:
-        path: "{{ item.item }}"
+        path: "{{ item }}"
         state: directory
         mode: 0777
         group: "{{ ansible_user }}"
         owner: "{{ ansible_user }}"
-      when: item.stat.exists == false
       with_items:
-      - "{{ stats.results }}"
+      - ["/data/shard1", "/data/shard2"]

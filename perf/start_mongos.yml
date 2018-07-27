@@ -6,4 +6,4 @@
     ansible_python_interpreter: '/usr/bin/python3'
   tasks:
     - name: Starting mongos
-      shell: bash -lc "mongos --config /data/mongos.conf"
+      shell: bash -lc "mongos --config /data/mongos.conf --fork --logpath /data/mongos.log"

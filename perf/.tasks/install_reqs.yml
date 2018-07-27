@@ -25,7 +25,7 @@
   replace:
     path: /etc/security/limits.conf
     regexp: "(.*)USER(.*)$"
-    replace: "\1{{ ansible_user }}\2"
+    replace: "\\1{{ ansible_user }}\\2"
 
 - name: Updating sysctl
   become: yes
@@ -62,6 +62,7 @@
     update_cache: yes
   
 - name: Installing latest Mongodb Enterprise Edition
+  become: yes
   apt:
     update_cache: yes
     name: "mongodb-enterprise"

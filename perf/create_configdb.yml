@@ -4,7 +4,7 @@
   vars:
     ansible_python_interpreter: '/usr/bin/python3'
     configdb: 3
-    base_port: 27000
+    base_port: 28002
     config_repl: "perf_test"
     id: "_id: '{{ config_repl }}'"
     member_item: "{ _id : ID_VAL, host: 'localhost:PORT' }"
@@ -19,27 +19,22 @@
         dest: /data/configdb.conf
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-    
-    - name: Ensuring existing data dirs
-      state:
-        path: "{{ item }}"
-      register: stats
-      with_items:
-      -  ["/data/cfg1", "/data/cfg2", "/data/cfg3"]
-    
+
     - name: Creating non-existing dirs
       file:
-        path: "{{ item.item }}"
+        path: "{{ item }}"
         state: directory
         mode: 0777
         group: "{{ ansible_user }}"
         owner: "{{ ansible_user }}"
-      when: item.stat.exists == false
       with_items:
-      - "{{ stats.results }}"
+      - ["/data/cfg1", "/data/cfg2", "/data/cfg3"]
 
     - name: Starting each config server
       shell: bash -lc "{{ shell_command }}"
+
+    - debug:
+        msg: "Shell command: {{ shell_command }} \n RSINIT: {{ rsinit }}"
 
     - name: Designating repl set master
       shell: mongo --host localhost --port {{ base_port }} --eval "{{ rsinit }}"

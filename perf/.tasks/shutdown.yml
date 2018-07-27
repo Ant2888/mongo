@@ -1,4 +1,4 @@
 - name: Killing all Mongo instances
   become: yes
-  shell: bash -lc "kill -9 $(pgrep mongo)"
+  shell: bash -lc "pkill -f mongo"
   failed_when: no

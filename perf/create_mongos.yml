@@ -1,13 +1,22 @@
 # This can all be called after the shards are created
 ---
-- hosts: shardnofail:shardfail
+- hosts: shardnofail
   remote_user: "{{ ansible_user }}"
   vars:
     ansible_python_interpreter: '/usr/bin/python3'
     base_port: 28000
   tasks:
-    - name: Starting shards
-      shell: bash -lc "mongod --config /data/sharddb.conf --dbpath /data/shard --fork --logpath /data/mongod.log"
+    - name: Starting no-fail shard
+      shell: bash -lc "mongod --config /data/sharddb.conf --dbpath /data/shard1 --fork --logpath /data/mongod.log --port {{ base_port }}"
+
+- hosts: shardfail
+  remote_user: "{{ ansible_user }}"
+  vars:
+    ansible_python_interpreter: '/usr/bin/python3'
+    base_port: 28001
+  tasks:
+    - name: Starting fail shard
+      shell: bash -lc "mongod --config /data/sharddb.conf --dbpath /data/shard2 --fork --logpath /data/mongod.log --port {{ base_port }}"
 
 - hosts: mongos
   remote_user: "{{ ansible_user }}"
