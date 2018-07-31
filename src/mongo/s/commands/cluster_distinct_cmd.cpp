@@ -139,8 +139,9 @@ public:
             nsStruct.executionNss = resolvedAggRequest.getNamespaceString();
 
             auto bodyBuilder = result->getBodyBuilder();
-            return ClusterAggregate::runAggregate(
+            auto status = ClusterAggregate::runAggregate(
                 opCtx, nsStruct, resolvedAggRequest, resolvedAggCmd, &bodyBuilder);
+            return status.getStatus();
         }
 
         long long millisElapsed = timer.millis();

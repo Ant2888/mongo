@@ -72,9 +72,11 @@ public:
      *
      * The raw aggregate command parameters should be passed in 'cmdObj'.
      *
-     * On success, fills out 'result' with the command response.
+     * A CursorResponse is returned if a cursor is used. The result is only filled in the scenario
+     * that an error occured (note an OK field in this case doesn't not signify the lack of an error) 
+     * OR this is an explain request.
      */
-    static Status runAggregate(OperationContext* opCtx,
+    static StatusWith<boost::optional<CursorResponse>> runAggregate(OperationContext* opCtx,
                                const Namespaces& namespaces,
                                const AggregationRequest& request,
                                BSONObj cmdObj,
@@ -96,7 +98,7 @@ private:
                                  const AggregationRequest& aggRequest,
                                  BSONObj cmd);
 
-    static Status aggPassthrough(OperationContext*,
+    static StatusWith<boost::optional<CursorResponse>> aggPassthrough(OperationContext*,
                                  const Namespaces&,
                                  const ShardId&,
                                  BSONObj cmd,

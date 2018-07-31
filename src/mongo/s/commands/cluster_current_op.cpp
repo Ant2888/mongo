@@ -82,12 +82,11 @@ private:
                                                      &responseBuilder);
 
         if (!status.isOK()) {
-            return status;
+            return status.getStatus();
         }
 
-        CommandHelpers::appendSimpleCommandStatus(responseBuilder, true);
-
-        return CursorResponse::parseFromBSON(responseBuilder.obj());
+        uassert('0', "No cursor was supplied after successful aggregation", status.getValue() != boost::none);
+        return std::move(status.getValue().get());
     }
 
 } clusterCurrentOpCmd;
