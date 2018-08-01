@@ -7,7 +7,7 @@
     base_port: 28002
     config_repl: "perf_test"
     id: "_id: '{{ config_repl }}'"
-    member_item: "{ _id : ID_VAL, host: 'localhost:PORT' }"
+    member_item: "{ _id : ID_VAL, host: '0.0.0.0:PORT' }"
     members: "members: [{% for _ind in range(configdb) %}{{ member_item | replace('ID_VAL', _ind) | replace('PORT', base_port+_ind) }},{% endfor %}]"
     rsinit: "rs.initiate({% raw %}{{% endraw %} {{id}}, configsvr: true, {{members}} {% raw %}}{% endraw %});"
     cmd_temp: 'mongod --config /data/configdb.conf --port PORT --dbpath /data/cfgNUM --fork --logpath /data/mongod.log'
