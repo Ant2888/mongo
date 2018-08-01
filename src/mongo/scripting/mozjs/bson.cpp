@@ -46,8 +46,11 @@ namespace mozjs {
 
 const char* const BSONInfo::className = "BSON";
 
-const JSFunctionSpec BSONInfo::freeFunctions[3] = {
-    MONGO_ATTACH_JS_FUNCTION(bsonWoCompare), MONGO_ATTACH_JS_FUNCTION(bsonBinaryEqual), JS_FS_END,
+const JSFunctionSpec BSONInfo::freeFunctions[4] = {
+    MONGO_ATTACH_JS_FUNCTION(bsonWoCompare),
+    MONGO_ATTACH_JS_FUNCTION(bsonBinaryEqual),
+    MONGO_ATTACH_JS_FUNCTION(usedDocumentSequences),
+    JS_FS_END,
 };
 
 namespace {
@@ -59,13 +62,18 @@ namespace {
  * the appearance of mutable state on the read/write versions.
  */
 struct BSONHolder {
-    BSONHolder(const BSONObj& obj, const BSONObj* parent, const MozJSImplScope* scope, bool ro)
+    BSONHolder(const BSONObj& obj,
+               const BSONObj* parent,
+               const MozJSImplScope* scope,
+               bool ro,
+               bool usedDocumentSequences)
         : _obj(obj),
           _generation(scope->getGeneration()),
           _isOwned(obj.isOwned() || (parent && parent->isOwned())),
           _resolved(false),
           _readOnly(ro),
-          _altered(false) {
+          _altered(false),
+          _usedDocumentSequences(usedDocumentSequences) {
         uassert(
             ErrorCodes::BadValue,
             "Attempt to bind an unowned BSON Object to a JS scope marked as requiring ownership",
@@ -92,6 +100,7 @@ struct BSONHolder {
     bool _resolved;
     bool _readOnly;
     bool _altered;
+    bool _usedDocumentSequences;
     StringMap<bool> _removed;
 };
 
@@ -106,12 +115,17 @@ BSONHolder* getValidHolder(JSContext* cx, JSObject* obj) {
 
 }  // namespace
 
-void BSONInfo::make(
-    JSContext* cx, JS::MutableHandleObject obj, BSONObj bson, const BSONObj* parent, bool ro) {
+void BSONInfo::make(JSContext* cx,
+                    JS::MutableHandleObject obj,
+                    BSONObj bson,
+                    const BSONObj* parent,
+                    bool ro,
+                    bool usedDocumentSequences) {
     auto scope = getScope(cx);
 
     scope->getProto<BSONInfo>().newObject(obj);
-    JS_SetPrivate(obj, scope->trackedNew<BSONHolder>(bson, parent, scope, ro));
+    JS_SetPrivate(obj,
+                  scope->trackedNew<BSONHolder>(bson, parent, scope, ro, usedDocumentSequences));
 }
 
 void BSONInfo::finalize(JSFreeOp* fop, JSObject* obj) {
@@ -281,6 +295,24 @@ void BSONInfo::Functions::bsonBinaryEqual::call(JSContext* cx, JS::CallArgs args
     BSONObj secondObject = ValueWriter(cx, args.get(1)).toBSON();
 
     args.rval().setBoolean(firstObject.binaryEqual(secondObject));
+}
+
+void BSONInfo::Functions::usedDocumentSequences::call(JSContext* cx, JS::CallArgs args) {
+    if (args.length() != 1)
+        uasserted(ErrorCodes::BadValue, "usedDocumentSequences needs 1 argument");
+
+    if (!getScope(cx)->getProto<BSONInfo>().instanceOf(args.get(0)))
+        uasserted(ErrorCodes::BadValue,
+                  "argument to usedDocumentSequences must be an object of type BSONInfo");
+
+    BSONHolder* holder = getValidHolder(cx, &args.get(0).toObject());
+
+    if (!holder) {
+        args.rval().setBoolean(false);
+        return;  // throw error instead?
+    }
+
+    args.rval().setBoolean(holder->_usedDocumentSequences);
 }
 
 void BSONInfo::postInstall(JSContext* cx, JS::HandleObject global, JS::HandleObject proto) {

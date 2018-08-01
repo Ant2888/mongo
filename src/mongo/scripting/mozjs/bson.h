@@ -71,13 +71,18 @@ struct BSONInfo : public BaseInfo {
     struct Functions {
         MONGO_DECLARE_JS_FUNCTION(bsonWoCompare);
         MONGO_DECLARE_JS_FUNCTION(bsonBinaryEqual);
+        MONGO_DECLARE_JS_FUNCTION(usedDocumentSequences);
     };
 
-    static const JSFunctionSpec freeFunctions[3];
+    static const JSFunctionSpec freeFunctions[4];
 
     static std::tuple<BSONObj*, bool> originalBSON(JSContext* cx, JS::HandleObject obj);
-    static void make(
-        JSContext* cx, JS::MutableHandleObject obj, BSONObj bson, const BSONObj* parent, bool ro);
+    static void make(JSContext* cx,
+                     JS::MutableHandleObject obj,
+                     BSONObj bson,
+                     const BSONObj* parent,
+                     bool ro,
+                     bool usedDocumentSequences);
 };
 
 }  // namespace mozjs

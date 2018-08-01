@@ -358,7 +358,7 @@ void ObjectWrapper::setBSONElement(Key key,
 
 void ObjectWrapper::setBSON(Key key, const BSONObj& obj, bool readOnly) {
     JS::RootedValue value(_context);
-    ValueReader(_context, &value).fromBSON(obj, nullptr, readOnly);
+    ValueReader(_context, &value).fromBSON(obj, nullptr, readOnly, false);
 
     setValue(key, value);
 }

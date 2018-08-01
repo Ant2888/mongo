@@ -14,7 +14,7 @@ executor:
   config:
     shell_options:
       rpcProtocols: opQueryOnly
-      readMode: commands
+      readMode: commandsNoDocumentSequences
   hooks:
   - class: ValidateCollections
     shell_options:

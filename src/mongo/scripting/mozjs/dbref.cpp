@@ -101,7 +101,7 @@ void DBRefInfo::make(
     JSContext* cx, JS::MutableHandleObject obj, BSONObj bson, const BSONObj* parent, bool ro) {
 
     JS::RootedObject local(cx);
-    BSONInfo::make(cx, &local, std::move(bson), parent, ro);
+    BSONInfo::make(cx, &local, std::move(bson), parent, ro, false);
 
     auto scope = getScope(cx);
 

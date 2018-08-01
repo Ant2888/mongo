@@ -70,7 +70,7 @@ executor:
   config:
     shell_options:
       rpcProtocols: opQueryOnly
-      readMode: commands
+      readMode: commandsNoDocumentSequences #opQuery doesn't support document sequences, so we turn them off
   hooks:
   - class: CheckReplDBHash
   - class: ValidateCollections

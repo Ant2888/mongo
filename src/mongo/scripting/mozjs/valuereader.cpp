@@ -203,7 +203,10 @@ void ValueReader::fromBSONElement(const BSONElement& elem, const BSONObj& parent
     _value.setUndefined();
 }
 
-void ValueReader::fromBSON(const BSONObj& obj, const BSONObj* parent, bool readOnly) {
+void ValueReader::fromBSON(const BSONObj& obj,
+                           const BSONObj* parent,
+                           bool readOnly,
+                           bool usedDocumentSequences) {
     JS::RootedObject child(_context);
 
     bool filledDBRef = false;
@@ -219,7 +222,7 @@ void ValueReader::fromBSON(const BSONObj& obj, const BSONObj* parent, bool readO
     }
 
     if (!filledDBRef) {
-        BSONInfo::make(_context, &child, obj, parent, readOnly);
+        BSONInfo::make(_context, &child, obj, parent, readOnly, usedDocumentSequences);
     }
 
     _value.setObjectOrNull(child);

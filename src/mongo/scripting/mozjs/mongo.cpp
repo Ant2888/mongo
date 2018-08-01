@@ -181,12 +181,16 @@ void foldDocumentSequences(JSContext* cx,
         // The entire dotted path will need to be traversed in most cases.
         std::vector<std::string> strs;
         boost::split(strs, sequence.name, [](char c) { return c == '.'; });
-        uassert(ErrorCodes::BadValue, "A name was not specified for the DocumentSequence.", strs.size() > 0);
+        uassert(ErrorCodes::BadValue,
+                "A name was not specified for the DocumentSequence.",
+                strs.size() > 0);
 
         JS::RootedValue refVal(cx);
         for (unsigned i = 0; i < strs.size() - 1; ++i) {
             ObjectWrapper::Key k(strs[i].c_str());
-            uassert('0', str::stream() << "No (sub)object named '" << strs[i] << "' exists", body.hasField(k));
+            uassert('0',
+                    str::stream() << "No (sub)object named '" << strs[i] << "' exists",
+                    body.hasField(k));
             body.getValue(k, &refVal);
             body = ObjectWrapper(cx, refVal);
         }
@@ -253,7 +257,9 @@ void MongoBase::Functions::runCommand::call(JSContext* cx, JS::CallArgs args) {
 
     // The returned object is not read only as some of our tests depend on modifying it.
     // Also, we make a copy here because we want a copy after we dump bodyRes
-    ValueReader(cx, args.rval()).fromBSON(bodyRes.getOwned(), nullptr, false);
+
+    ValueReader(cx, args.rval())
+        .fromBSON(bodyRes.getOwned(), nullptr, false, reply->hasDocumentSequences());
     if (reply->hasDocumentSequences()) {
         foldDocumentSequences(cx, args.rval(), reply->getDocumentSequences());
     }

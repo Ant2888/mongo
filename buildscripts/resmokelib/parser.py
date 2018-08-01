@@ -165,7 +165,7 @@ def _make_parser():  # pylint: disable=too-many-statements
                       help="The transport layer used by jstests")
 
     parser.add_option("--shellReadMode", type="choice", action="store", dest="shell_read_mode",
-                      choices=("commands", "compatibility", "legacy"), metavar="READ_MODE",
+            choices=("commands", "commandsNoDocumentSequences", "compatibility", "legacy"), metavar="READ_MODE",
                       help="The read mode used by the mongo shell.")
 
     parser.add_option("--shellWriteMode", type="choice", action="store", dest="shell_write_mode",

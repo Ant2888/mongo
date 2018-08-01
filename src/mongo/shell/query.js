@@ -253,7 +253,7 @@ DBQuery.prototype._convertToCommand = function(canAttachReadPref) {
         }
     }
 
-    if (this._mongo.useReadCommands()) {
+    if (this._mongo.useDocumentSequences()) {
         cmd["tempOptInToDocumentSequences"] = true;
     }
 
@@ -705,14 +705,14 @@ function DBCommandCursor(db, cmdResult, batchSize, maxAwaitTimeMS, txnNumber) {
 
     this._batch = cmdResult.cursor.firstBatch.reverse();  // modifies input to allow popping
 
-    if (db.getMongo().useReadCommandsNoDocumentSequences()) {
+    if (db.getMongo().useReadCommands()) {
         this._useReadCommands = true;
         this._cursorid = cmdResult.cursor.id;
         this._batchSize = batchSize;
         this._maxAwaitTimeMS = maxAwaitTimeMS;
         this._txnNumber = txnNumber;
 
-        if (db.getMongo().useReadCommands()) {
+        if (db.getMongo().useDocumentSequences()) {
             this._useDocumentSequences = true;
         }
 

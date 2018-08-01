@@ -338,7 +338,7 @@ Mongo.prototype.writeMode = function() {
  *
  * Currently, the C++ client will always use OP_QUERY find and OP_GET_MORE.
  */
-Mongo.prototype.useReadCommands = function() {
+Mongo.prototype.useDocumentSequences = function() {
     return (this.readMode() === "commands");
 };
 
