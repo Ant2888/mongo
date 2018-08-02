@@ -68,26 +68,31 @@ public:
                                    const std::string& dbname,
                                    const BSONObj& cmdObj,
                                    boost::optional<ExplainOptions::Verbosity> verbosity,
-                                   BSONObjBuilder* result) {
+                                   rpc::ReplyBuilderInterface* result) {
             const auto aggregationRequest =
                 uassertStatusOK(AggregationRequest::parseFromBSON(dbname, cmdObj, verbosity));
 
             const auto& nss = aggregationRequest.getNamespaceString();
+            BSONObjBuilder body;
+            auto resp = uassertStatusOK(ClusterAggregate::runAggregate(
+                opCtx, ClusterAggregate::Namespaces{nss, nss}, aggregationRequest, cmdObj, &body));
 
-            uassertStatusOK(ClusterAggregate::runAggregate(
-                opCtx, ClusterAggregate::Namespaces{nss, nss}, aggregationRequest, cmdObj, result));
+            if (resp) {
+                resp->addToReply(CursorResponse::ResponseType::InitialResponse, result,
+                    aggregationRequest.getTempOptInToDocumentSequences());
+            }
+            auto meta = body.done();
+            result->getBodyBuilder().appendElementsUnique(meta);
         }
 
-        void run(OperationContext* opCtx, rpc::ReplyBuilderInterface* reply) override {
-            auto bob = reply->getBodyBuilder();
-            _runAggCommand(opCtx, _dbName, _request.body, boost::none, &bob);
+        void run(OperationContext* opCtx, rpc::ReplyBuilderInterface* result) override {
+            _runAggCommand(opCtx, _dbName, _request.body, boost::none, result);
         }
 
         void explain(OperationContext* opCtx,
                      ExplainOptions::Verbosity verbosity,
                      rpc::ReplyBuilderInterface* result) override {
-            auto bodyBuilder = result->getBodyBuilder();
-            _runAggCommand(opCtx, _dbName, _request.body, verbosity, &bodyBuilder);
+            _runAggCommand(opCtx, _dbName, _request.body, verbosity, result);
         }
 
         void doCheckAuthorization(OperationContext* opCtx) const override {

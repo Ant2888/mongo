@@ -165,6 +165,7 @@ public:
                                              expCtx,
                                              extensionsCallback,
                                              MatchExpressionParser::kAllowAllSpecialFeatures));
+            const auto useDocSequences = cq->getQueryRequest().getTempOptInToDocumentSequences();
 
             if (ctx->getView()) {
                 // Relinquish locks. The aggregation command will re-acquire them.

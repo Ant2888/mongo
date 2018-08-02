@@ -74,8 +74,7 @@ bool cursorCommandPassthrough(OperationContext* opCtx,
                             nss,
                             Grid::get(opCtx)->getExecutorPool()->getArbitraryExecutor(),
                             Grid::get(opCtx)->getCursorManager()));
-
-    CommandHelpers::filterCommandReplyForPassthrough(transformedResponse, out);
+    CommandHelpers::filterCommandReplyForPassthrough(transformedResponse.response, out);
     return true;
 }
 
@@ -543,7 +542,12 @@ public:
 
         auto dbInfoStatus = Grid::get(opCtx)->catalogCache()->getDatabase(opCtx, dbName);
         if (!dbInfoStatus.isOK()) {
-            return appendEmptyResultSet(opCtx, result, dbInfoStatus.getStatus(), nss.ns());
+            auto cursor = createEmptyResultSet(opCtx, dbInfoStatus.getStatus(), nss);
+            if (!cursor) {
+                return false;
+            }
+            cursor->addToBSON(CursorResponse::ResponseType::InitialResponse, &result);
+            return true;
         }
 
         return cursorCommandPassthrough(

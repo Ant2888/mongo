@@ -82,12 +82,10 @@ private:
                                                      &responseBuilder);
 
         if (!status.isOK()) {
-            return status;
+            return status.getStatus();
         }
-
-        CommandHelpers::appendSimpleCommandStatus(responseBuilder, true);
-
-        return CursorResponse::parseFromBSON(responseBuilder.obj());
+        // If a cursor wasn't returned then just provide an empty one
+        return status.getValue() ? std::move(status.getValue().get()) : CursorResponse(nss, 0LL, {});
     }
 
 } clusterCurrentOpCmd;
