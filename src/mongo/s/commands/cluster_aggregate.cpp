@@ -145,25 +145,7 @@ Status appendCursorResponseToCommandResult(const ShardId& shardId,
     }
 
     // Pass the results from the remote shard into our command response.
-    // Need to avoid adding the cursor field
-    // Temporary hack to just append elements that dont exist and are NOT the cursor
-    {
-        auto filteredObj = CommandHelpers::filterCommandReplyForPassthrough(cursorResponse);
-        std::set<std::string> have;
-        {
-            BSONObjIterator i = result->iterator();
-            while (i.more())
-                have.insert(i.next().fieldName());
-        }
-
-        BSONObjIterator it(filteredObj);
-        while (it.more()) {
-            BSONElement e = it.next();
-            if (e.fieldNameStringData() ==  "cursor" || have.count(e.fieldName()))
-                continue;
-            result->append(e);
-        }
-    }
+    result->appendElementsUnique(CommandHelpers::filterCommandReplyForPassthrough(cursorResponse));
     return getStatusFromCommandResult(result->asTempObj());
 }
 
@@ -1098,25 +1080,8 @@ StatusWith<boost::optional<CursorResponse>> ClusterAggregate::aggPassthrough(Ope
         appendWriteConcernErrorToCmdResponse(shard->getId(), wcErrorElem, *out);
     }
 
-    // Need to avoid adding the cursor field
     // Temporary hack to just append elements that dont exist and are NOT the cursor
-    {
-        auto filteredObj = CommandHelpers::filterCommandReplyForPassthrough(result);
-        std::set<std::string> have;
-        {
-            BSONObjIterator i = out->iterator();
-            while (i.more())
-                have.insert(i.next().fieldName());
-        }
-
-        BSONObjIterator it(filteredObj);
-        while (it.more()) {
-            BSONElement e = it.next();
-            if (e.fieldNameStringData() ==  "cursor" || have.count(e.fieldName()))
-                continue;
-            out->append(e);
-        }
-    }
+    out->appendElementsUnique(CommandHelpers::filterCommandReplyForPassthrough(result));
 
     auto status = getStatusFromCommandResult(out->asTempObj());
     if (auto resolvedView = status.extraInfo<ResolvedView>()) {
