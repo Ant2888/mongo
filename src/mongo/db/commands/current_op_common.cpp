@@ -110,9 +110,10 @@ bool CurrentOpCommandBase::run(OperationContext* opCtx,
     pipeline.push_back(groupBuilder.obj());
 
     // Pipeline is complete; create an AggregationRequest for $currentOp.
-    const AggregationRequest request(NamespaceString::makeCollectionlessAggregateNSS("admin"),
+    AggregationRequest request(NamespaceString::makeCollectionlessAggregateNSS("admin"),
                                      std::move(pipeline));
-
+    // TODO: SERVER-36287 Implement DocumentSequence support all the way down through sharding.
+    request.setTempOptInToDocumentSequences(false);
     // Run the pipeline and obtain a CursorResponse.
     auto aggResults = uassertStatusOK(runAggregation(opCtx, request));
 

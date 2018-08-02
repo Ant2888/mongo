@@ -274,8 +274,9 @@ public:
             if (!aggRequestOnView.isOK()) {
                 return aggRequestOnView.getStatus();
             }
-
             auto resolvedAggRequest = ex->asExpandedViewAggregation(aggRequestOnView.getValue());
+            // TODO: SERVER-36287 Implement DocumentSequence support all the way down through sharding.
+            resolvedAggRequest.setTempOptInToDocumentSequences(false);
             auto resolvedAggCmd = resolvedAggRequest.serializeToCommandObj().toBson();
 
             ClusterAggregate::Namespaces nsStruct;
