@@ -69,17 +69,19 @@ public:
                                    const BSONObj& cmdObj,
                                    boost::optional<ExplainOptions::Verbosity> verbosity,
                                    rpc::ReplyBuilderInterface* result) {
-            const auto aggregationRequest =
+            auto aggregationRequest =
                 uassertStatusOK(AggregationRequest::parseFromBSON(dbname, cmdObj, verbosity));
-
+            // TODO: SERVER-36287 Implement DocumentSequence support all the way down through sharding.
+            auto useDocSeq = aggregationRequest.getTempOptInToDocumentSequences();
+            aggregationRequest.setTempOptInToDocumentSequences(false);
+            
             const auto& nss = aggregationRequest.getNamespaceString();
             BSONObjBuilder body;
             auto resp = uassertStatusOK(ClusterAggregate::runAggregate(
                 opCtx, ClusterAggregate::Namespaces{nss, nss}, aggregationRequest, cmdObj, &body));
 
             if (resp) {
-                resp->addToReply(CursorResponse::ResponseType::InitialResponse, result,
-                    aggregationRequest.getTempOptInToDocumentSequences());
+                resp->addToReply(CursorResponse::ResponseType::InitialResponse, result, useDocSeq);
             }
             auto meta = body.done();
             result->getBodyBuilder().appendElementsUnique(meta);
