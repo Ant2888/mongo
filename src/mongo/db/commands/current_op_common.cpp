@@ -110,7 +110,7 @@ bool CurrentOpCommandBase::run(OperationContext* opCtx,
     pipeline.push_back(groupBuilder.obj());
 
     // Pipeline is complete; create an AggregationRequest for $currentOp.
-    const AggregationRequest request(NamespaceString::makeCollectionlessAggregateNSS("admin"),
+    AggregationRequest request(NamespaceString::makeCollectionlessAggregateNSS("admin"),
                                      std::move(pipeline));
 
     // Run the pipeline and obtain a CursorResponse.
