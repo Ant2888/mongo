@@ -219,31 +219,39 @@ StatusWith<CursorResponse> CursorResponse::parseFromBSON(const BSONObj& cmdRespo
              writeConcernError ? writeConcernError.Obj().getOwned() : boost::optional<BSONObj>{}}};
 }
 
-void CursorResponse::addToBSON(CursorResponse::ResponseType responseType,
-                               BSONObjBuilder* builder) const {
+// The document sequences should be appended to the replyBuilder.
+void CursorResponse::_appendCursor(CursorResponse::ResponseType responseType, 
+                   BSONObjBuilder* builder, 
+                   bool useDocumentSequences, 
+                   bool appendWriteConcern) const {
     BSONObjBuilder cursorBuilder(builder->subobjStart(kCursorField));
-
     cursorBuilder.append(kIdField, _cursorId);
     cursorBuilder.append(kNsField, _nss.ns());
 
-    const char* batchFieldName =
-        (responseType == ResponseType::InitialResponse) ? kBatchFieldInitial : kBatchField;
-    BSONArrayBuilder batchBuilder(cursorBuilder.subarrayStart(batchFieldName));
-    for (const BSONObj& obj : _batch) {
-        batchBuilder.append(obj);
+    if (!useDocumentSequences) {
+        const char* batchFieldName =
+            (responseType == ResponseType::InitialResponse) ? kBatchFieldInitial : kBatchField;
+        BSONArrayBuilder batchBuilder(cursorBuilder.subarrayStart(batchFieldName));
+        for (const BSONObj& obj : _batch) {
+            batchBuilder.append(obj);
+        }
+        batchBuilder.doneFast();
     }
-    batchBuilder.doneFast();
-
     cursorBuilder.doneFast();
-
+   
     if (_latestOplogTimestamp) {
         builder->append(kInternalLatestOplogTimestampField, *_latestOplogTimestamp);
     }
-    builder->append("ok", 1.0);
+    builder->append("ok", 1.0); 
 
-    if (_writeConcernError) {
+    if (_writeConcernError && appendWriteConcern) {
         builder->append("writeConcernError", *_writeConcernError);
     }
+}
+
+void CursorResponse::addToBSON(CursorResponse::ResponseType responseType,
+                               BSONObjBuilder* builder) const {
+    _appendCursor(responseType, builder, false, true);
 }
 
 void CursorResponse::addToReply(CursorResponse::ResponseType responseType,
@@ -252,7 +260,7 @@ void CursorResponse::addToReply(CursorResponse::ResponseType responseType,
                                 bool appendWriteConcern) const {
     if (!useDocumentSequences) {
         auto bob = reply->getBodyBuilder();
-        addToBSON(responseType, &bob);
+        _appendCursor(responseType, &bob, useDocumentSequences, appendWriteConcern);
         return;
     }
     const char* batchFieldName = (responseType == ResponseType::InitialResponse)
@@ -265,18 +273,7 @@ void CursorResponse::addToReply(CursorResponse::ResponseType responseType,
     docSeq.done();
 
     auto bob = reply->getBodyBuilder();
-    BSONObjBuilder cursorBuilder(bob.subobjStart(kCursorField));
-    cursorBuilder.append(kIdField, _cursorId);
-    cursorBuilder.append(kNsField, _nss.ns());
-    cursorBuilder.doneFast();
-    if (_latestOplogTimestamp) {
-        bob.append(kInternalLatestOplogTimestampField, *_latestOplogTimestamp);
-    }
-    bob.append("ok", 1.0);
-
-    if (_writeConcernError && appendWriteConcern) {
-        bob.append("writeConcernError", *_writeConcernError);
-    }
+    _appendCursor(responseType, &bob, useDocumentSequences, appendWriteConcern);
 }
 
 

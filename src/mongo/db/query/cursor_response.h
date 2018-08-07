@@ -256,6 +256,11 @@ public:
     }
 
 private:
+    void _appendCursor(CursorResponse::ResponseType responseType, 
+                       BSONObjBuilder* builder, 
+                       bool useDocumentSequences, 
+                       bool appendWriteConcern) const;
+
     NamespaceString _nss;
     CursorId _cursorId;
     std::vector<BSONObj> _batch;
