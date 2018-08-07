@@ -243,7 +243,8 @@ public:
      */
     void addToReply(ResponseType responseType,
                     rpc::ReplyBuilderInterface* reply,
-                    bool useDocumentSequences) const;
+                    bool useDocumentSequences,
+                    bool appendWriteConcern) const;
 
     /**
      * Converts this response to its raw BSON representation.

@@ -248,7 +248,8 @@ void CursorResponse::addToBSON(CursorResponse::ResponseType responseType,
 
 void CursorResponse::addToReply(CursorResponse::ResponseType responseType,
                                 rpc::ReplyBuilderInterface* reply,
-                                bool useDocumentSequences) const {
+                                bool useDocumentSequences,
+                                bool appendWriteConcern) const {
     if (!useDocumentSequences) {
         auto bob = reply->getBodyBuilder();
         addToBSON(responseType, &bob);
@@ -273,7 +274,7 @@ void CursorResponse::addToReply(CursorResponse::ResponseType responseType,
     }
     bob.append("ok", 1.0);
 
-    if (_writeConcernError) {
+    if (_writeConcernError && appendWriteConcern) {
         bob.append("writeConcernError", *_writeConcernError);
     }
 }

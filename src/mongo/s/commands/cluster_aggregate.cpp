@@ -142,7 +142,7 @@ Status appendCursorResponseToCommandResult(const ShardId& shardId,
                                            rpc::ReplyBuilderInterface* result) {
     if (possibleCursor.cursor) {
         possibleCursor.cursor->addToReply(
-            CursorResponse::ResponseType::InitialResponse, result, useDocSequences);
+            CursorResponse::ResponseType::InitialResponse, result, useDocSequences, false);
     }
     auto bodyBuilder = result->getBodyBuilder();
     // If a write error was encountered, append it to the output buffer first.
@@ -834,7 +834,8 @@ Status runPipelineOnMongoS(const boost::intrusive_ptr<ExpressionContext>& expCtx
     // can never run on mongoS.
     cursorResponse.addToReply(CursorResponse::ResponseType::InitialResponse,
                               result,
-                              request.getTempOptInToDocumentSequences());
+                              request.getTempOptInToDocumentSequences(),
+                              true);
     auto bodyBuilder = result->getBodyBuilder();
     CommandHelpers::appendSimpleCommandStatus(bodyBuilder, true);
     return getStatusFromCommandResult(bodyBuilder.asTempObj());
@@ -916,7 +917,7 @@ void appendEmptyResultSetWithStatus(OperationContext* opCtx,
     auto cursor = getEmptyResultSet(opCtx, status, nss);
     if (cursor) {
         cursor->addToReply(
-            CursorResponse::ResponseType::InitialResponse, reply, useDocumentSequences);
+            CursorResponse::ResponseType::InitialResponse, reply, useDocumentSequences, true);
     }
 }
 
@@ -1111,7 +1112,8 @@ Status ClusterAggregate::aggPassthrough(OperationContext* opCtx,
     if (cursorResp) {
         cursorResp->addToReply(CursorResponse::ResponseType::InitialResponse,
                                out,
-                               useDocSequences);
+                               useDocSequences,
+                               false);
     }
     auto bodyBuilder = out->getBodyBuilder();
     if (auto wcErrorElem = result["writeConcernError"]) {

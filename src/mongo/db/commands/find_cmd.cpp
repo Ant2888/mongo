@@ -313,7 +313,7 @@ public:
                 endQueryOp(opCtx, collection, *exec, numResults, cursorId);
                 CursorResponse(nss, cursorId, {})
                     .addToReply(
-                        CursorResponse::ResponseType::InitialResponse, result, useDocSequences);
+                        CursorResponse::ResponseType::InitialResponse, result, useDocSequences, true);
                 return;
             }
 
