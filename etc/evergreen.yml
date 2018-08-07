@@ -4624,7 +4624,7 @@ tasks:
   - func: "do setup"
   - func: "run tests"
     vars:
-      resmoke_args: --suites=core_op_query --storageEngine=wiredTiger
+      resmoke_args: --suites=core_op_query --storageEngine=wiredTiger --excludeWithAnyTags=requires_document_sequences
       run_multiple_jobs: true
 
 - <<: *task_template
@@ -4748,7 +4748,7 @@ tasks:
   - func: "run tests"
     vars:
       task_path_suffix: /data/multiversion
-      resmoke_args: --suites=multiversion_auth --storageEngine=wiredTiger
+      resmoke_args: --suites=multiversion_auth --storageEngine=wiredTiger --shellReadMode=commandsNoDocumentSequences
       run_multiple_jobs: true
 
 - <<: *task_template
@@ -4759,7 +4759,7 @@ tasks:
   - func: "run tests"
     vars:
       task_path_suffix: /data/multiversion
-      resmoke_args: --suites=multiversion --storageEngine=wiredTiger
+      resmoke_args: --suites=multiversion --storageEngine=wiredTiger --shellReadMode=commandsNoDocumentSequences
       run_multiple_jobs: true
 
 - <<: *task_template
@@ -4837,7 +4837,7 @@ tasks:
   - func: "do setup"
   - func: "run tests"
     vars:
-      resmoke_args: --suites=sharding_jscore_op_query_passthrough --storageEngine=wiredTiger
+      resmoke_args: --suites=sharding_jscore_op_query_passthrough --storageEngine=wiredTiger --excludeWithAnyTags=requires_document_sequences
       run_multiple_jobs: true
 
 - <<: *task_template

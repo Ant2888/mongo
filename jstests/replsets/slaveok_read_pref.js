@@ -26,7 +26,7 @@
 
     const secDB = rst.getSecondary().getDB(jsTestName());
 
-    for (let readMode of["commands", "legacy"]) {
+    for (let readMode of["commandsNoDocumentSequences", "legacy"]) {
         for (let readPref of readPrefs) {
             for (let slaveOk of[true, false]) {
                 const testType = {readMode: readMode, readPref: readPref, slaveOk: slaveOk};

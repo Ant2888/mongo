@@ -318,7 +318,7 @@
             //
             // Confirm currentOp contains collation for find command.
             //
-            if (readMode === "commands") {
+            if (readMode === "commandsNoDocumentSequences") {
                 confirmCurrentOpContents({
                     test: function(db) {
                         assert.eq(db.currentop_query.find({a: 1})
@@ -616,7 +616,7 @@
     }
 
     for (let connType of[rsConn, mongosConn]) {
-        for (let readMode of["commands", "legacy"]) {
+        for (let readMode of["commandsNoDocumentSequences", "legacy"]) {
             for (let truncatedOps of[false, true]) {
                 for (let localOps of[false, true]) {
                     // Run all tests using the $currentOp aggregation stage.

@@ -215,6 +215,7 @@ var DB;
             delete optcpy['useCursor'];
         }
 
+	    print("useDocumentSequences: ", this.getMongo().useDocumentSequences());
         if (!('tempOptInToDocumentSequences' in optcpy) && this.getMongo().useDocumentSequences()) {
             optcpy['tempOptInToDocumentSequences'] = true;
         }

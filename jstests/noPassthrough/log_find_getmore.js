@@ -51,7 +51,7 @@
     //
     // Command tests.
     //
-    testDB.getMongo().forceReadMode("commands");
+    testDB.getMongo().forceReadMode("commandsNoDocumentSequences");
 
     // TEST: Verify the log format of the find command.
     let cursor = coll.find({a: {$gt: 0}}).sort({a: 1}).skip(1).limit(10).hint({a: 1}).batchSize(5);

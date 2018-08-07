@@ -350,7 +350,7 @@ Mongo.prototype.useDocumentSequences = function() {
  */
 Mongo.prototype.useReadCommands = function() {
     var mode = this.readMode();
-    return (mode === "commandsNoDocumentSequences" || mode == "commands");
+    return (mode === "commandsNoDocumentSequences" || mode === "commands");
 };
 
 /**

@@ -63,8 +63,8 @@
     //
     // Revert to "commands" read mode for the find command test cases below.
     //
-    mongosDB.getMongo().forceReadMode("commands");
-    shardDB.getMongo().forceReadMode("commands");
+    mongosDB.getMongo().forceReadMode("commandsNoDocumentSequences");
+    shardDB.getMongo().forceReadMode("commandsNoDocumentSequences");
 
     // TEST CASE: Verify that string find.comment and non-string find.filter.$comment propagate.
     assert.eq(mongosColl.find({a: 1, $comment: {b: "TEST"}}).comment("TEST").itcount(), 1);

@@ -179,7 +179,7 @@
         assert.throws(function() {
             legacyCursor.next();
         }, [], "Legacy getMore expected to fail on changeStream cursor.");
-        db.getMongo().forceReadMode('commands');
+        db.getMongo().forceReadMode('commandsNoDocumentSequences');
     }
 
     jsTestLog("Testing resumability");

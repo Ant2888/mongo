@@ -57,7 +57,7 @@
         // Transparently handles assert.writeOK for legacy writes.
         function assertWriteOK(writeResponse) {
             if (!writeResponse) {
-                assert(db.getMongo().writeMode !== "commands");
+                assert(db.getMongo().writeMode !== "commandsNoDocumentSequences");
                 assert(db.runCommand({getLastError: 1}).err == null);
             } else {
                 assert.commandWorked(writeResponse);
@@ -344,7 +344,7 @@
         ];
 
         // Confirm log contains collation for find command.
-        if (readWriteMode === "commands") {
+        if (readWriteMode === "commandsNoDocumentSequences") {
             testList.push({
                 test: function(db) {
                     assert.eq(db.test.find({_id: {$in: [1, 5]}})
@@ -447,7 +447,7 @@
     //
 
     for (let testDB of[shardDB, mongosDB]) {
-        for (let readWriteMode of["commands", "legacy"]) {
+        for (let readWriteMode of["commandsNoDocumentSequences", "legacy"]) {
             // Test that all operations are logged when slowMs is < 0 and sampleRate is 1 at the
             // default logLevel.
             let [testsRun, logLines] = runLoggingTests({

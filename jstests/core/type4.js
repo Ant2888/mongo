@@ -23,7 +23,7 @@
     }, [], "invoke constructor on BSON");
 
     assert.throws(function() {
-        db.getMongo().forceReadMode("commands");
+        db.getMongo().forceReadMode("commandsNoDocumentSequences");
         var cursor = t.find();
         cursor.next();
 

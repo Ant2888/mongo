@@ -59,7 +59,7 @@
             cursor.next();
         }, [], "read from another user's legacy find cursor");
         testDB.logout();
-        testDB.getMongo().forceReadMode("commands");
+        testDB.getMongo().forceReadMode("commandsNoDocumentSequences");
 
         // Test that "Mallory" cannot use an aggregation cursor created by "Alice".
         assert.eq(1, testDB.auth("Alice", "pwd"));

@@ -1,7 +1,7 @@
 /**
  * Tests that calls that include flags to use documentSequences over the wire protocoll actually
  * return document sequences
- * @tags: [requires_find_command, requires_document_sequences]
+ * @tags: [requires_find_command, requires_document_sequences, requires_getmore]
  */
 (function() {
     "use strict";

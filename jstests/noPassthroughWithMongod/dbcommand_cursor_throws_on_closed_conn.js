@@ -5,7 +5,7 @@
     testDB.dropDatabase();
     var coll = testDB.collection;
     var conn = testDB.getMongo();
-    conn.forceReadMode("commands");
+    conn.forceReadMode("commandsNoDocumentSequences");
     assert.commandWorked(coll.save({}));
     var res = assert.commandWorked(testDB.runCommand({
         find: coll.getName(),
