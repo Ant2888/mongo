@@ -240,7 +240,7 @@ public:
      * Converts this response to its representation in a ReplyBuilderInterface. Note that this begins a body 
      * and adding any DocumentSequences to the reply after this call is illegal.
      */
-    void addToReply(ResponseType responseType, rpc::ReplyBuilderInterface* reply, bool useDocumentSequences) const;
+    void addToReply(ResponseType responseType, rpc::ReplyBuilderInterface* reply, bool useDocumentSequences, bool appendWriteConcern) const;
 
     /**
      * Converts this response to its raw BSON representation.

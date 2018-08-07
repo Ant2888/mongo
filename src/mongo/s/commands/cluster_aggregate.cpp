@@ -829,7 +829,7 @@ Status runPipelineOnMongoS(const boost::intrusive_ptr<ExpressionContext>& expCtx
 
     // We don't need to storePossibleCursor or propagate writeConcern errors; an $out pipeline
     // can never run on mongoS. 
-    cursorResponse.addToReply(CursorResponse::ResponseType::InitialResponse, result, request.getTempOptInToDocumentSequences());
+    cursorResponse.addToReply(CursorResponse::ResponseType::InitialResponse, result, request.getTempOptInToDocumentSequences(), true);
     auto bodyBuilder = result->getBodyBuilder();
     CommandHelpers::appendSimpleCommandStatus(bodyBuilder, true);
     return getStatusFromCommandResult(bodyBuilder.asTempObj());
@@ -909,7 +909,7 @@ void appendEmptyResultSetWithStatus(OperationContext* opCtx,
     }
     auto cursor = getEmptyResultSet(opCtx, status, nss);
     if (cursor) {
-        cursor->addToReply(CursorResponse::ResponseType::InitialResponse, reply, useDocumentSequences);
+        cursor->addToReply(CursorResponse::ResponseType::InitialResponse, reply, useDocumentSequences, true);
     }
 }
 
@@ -1096,7 +1096,7 @@ Status ClusterAggregate::aggPassthrough(OperationContext* opCtx,
     // First append the properly constructed writeconnernError and Cursor. It will then 
     // be skipped in appendElementsUnique.    
     if (cursorResp) {
-        cursorResp->addToReply(CursorResponse::ResponseType::InitialResponse, out, aggRequest.getTempOptInToDocumentSequences());
+        cursorResp->addToReply(CursorResponse::ResponseType::InitialResponse, out, aggRequest.getTempOptInToDocumentSequences(), false);
     }
     auto bodyBuilder = out->getBodyBuilder();
     if (auto wcErrorElem = result["writeConcernError"]) {

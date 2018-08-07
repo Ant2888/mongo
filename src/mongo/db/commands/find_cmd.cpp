@@ -314,7 +314,8 @@ public:
                 CursorResponse(nss, cursorId, {})
                    .addToReply(CursorResponse::ResponseType::InitialResponse,
                                result,
-                               useDocSequences);
+                               useDocSequences,
+                               true);
                 return;
             }
 
